@@ -1,0 +1,91 @@
+# Multi-Modal Image Anonymization System
+# Python Dependencies
+# Python 3.9+ Required
+
+# ============================================================================
+# Web Framework and Server
+# ============================================================================
+fastapi>=0.104.0
+uvicorn[standard]>=0.24.0
+python-multipart>=0.0.6
+jinja2>=3.1.2
+
+# ============================================================================
+# Deep Learning Framework (CPU-optimized)
+# ============================================================================
+# PyTorch CPU version - Official CPU index
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch==2.3.1+cpu
+torchvision==0.18.1+cpu
+
+# ============================================================================
+# Computer Vision and Image Processing
+# ============================================================================
+opencv-python>=4.8.0
+numpy>=1.24.0
+Pillow>=10.0.0
+
+# ============================================================================
+# Object Detection Models
+# ============================================================================
+ultralytics>=8.0.0  # YOLOv8 runtime for face and license plate detection
+
+# ============================================================================
+# Logging
+# ============================================================================
+loguru>=0.7.0
+
+# ============================================================================
+# Network and File Transfer
+# ============================================================================
+paramiko>=3.3.0  # SFTP client for remote file upload
+
+# ============================================================================
+# Configuration Management
+# ============================================================================
+pyyaml>=6.0
+
+# ============================================================================
+# Optional Dependencies
+# ============================================================================
+# RetinaFace backend (optional, for alternative face detection)
+# Uncomment if using RetinaFace as face detection backend
+# retinaface>=0.0.15
+# tensorflow>=2.13.0
+# tf-keras>=2.13.0
+
+# PaddleOCR (optional, for OCR functionality)
+# Uncomment if OCR features are required
+# paddleocr>=2.7.0
+# paddlepaddle>=2.5.0
+
+# ============================================================================
+# Development Dependencies (Optional)
+# ============================================================================
+# Uncomment for development and testing
+# pytest>=7.4.0
+# pytest-asyncio>=0.21.0
+# black>=23.0.0
+# flake8>=6.0.0
+# mypy>=1.5.0
+
+# ============================================================================
+# Installation Instructions
+# ============================================================================
+#
+# 1. Standard Installation:
+#    pip install -r requirements.txt
+#
+# 2. If PyTorch installation fails via pip, use Conda:
+#    conda install pytorch torchvision cpuonly -c pytorch
+#    pip install -r requirements.txt --no-deps torch torchvision
+#
+# 3. For RetinaFace backend support:
+#    pip install retinaface tf-keras tensorflow
+#
+# 4. For OCR functionality:
+#    pip install paddleocr paddlepaddle
+#
+# Note: This system is optimized for CPU environments and does not require
+# GPU support. All deep learning models are configured for CPU inference.
+

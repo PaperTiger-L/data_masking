@@ -1,0 +1,764 @@
+{% extends "base.html" %}
+
+{% block title %}{{ t('app_title') }}{% endblock %}
+
+
+
+{% block extra_css %}
+<style>
+.status-light {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background-color: #6c757d; /* Default gray */
+    transition: background-color 0.3s ease;
+}
+.status-light.success {
+    background-color: #198754; /* Green */
+}
+.status-light.error {
+    background-color: #dc3545; /* Red */
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container my-5">
+    <!-- 隐私协议确认 -->
+    <div id="privacyModal" class="modal fade" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">{{ t('privacy_title') }}</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        {{ t('privacy_read') }}
+                    </div>
+                    <h6>{{ t('privacy_data_info') }}</h6>
+                    <ul>
+                        <li>{{ t('privacy_local') }}</li>
+                        <li>{{ t('privacy_no_upload') }}</li>
+                        <li>{{ t('privacy_models') }}</li>
+                        <li>{{ t('privacy_cleanup') }}</li>
+                        <li>{{ t('privacy_optional') }}</li>
+                    </ul>
+                    <h6>{{ t('privacy_types') }}</h6>
+                    <ul>
+                        <li>{{ t('privacy_face') }}</li>
+                        <li>{{ t('privacy_plate') }}</li>
+                        <li>{{ t('privacy_text') }}</li>
+                    </ul>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ t('btn_cancel') }}</button>
+                    <button type="button" class="btn btn-primary" id="acceptPrivacy">{{ t('btn_agree') }}</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 主要内容 -->
+    <div id="mainContent" style="display: none;">
+        <div class="row">
+            <div class="col-lg-8 mx-auto">
+                <div class="text-center mb-5 d-flex justify-content-between align-items-start flex-wrap">
+                    <h1 class="display-4 mb-3">
+                        <i class="fas fa-shield-alt text-primary me-3"></i>
+                        {{ t('app_title') }}
+                    </h1>
+                    <p class="lead">{{ t('app_lead') }}</p>
+
+                    <!-- 语言选择 -->
+                    <div class="ms-auto">
+                        <label for="langSelect" class="form-label me-2 mb-0"><i class="fas fa-globe me-1"></i>{{ t('lang_label') }}</label>
+                        <select id="langSelect" class="form-select form-select-sm d-inline-block w-auto">
+                            <option value="zh" {{ 'selected' if lang == 'zh' else '' }}>中文</option>
+                            <option value="en" {{ 'selected' if lang == 'en' else '' }}>English</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- 服务器选择 -->
+                <div class="server-selection mb-4">
+                    <h5><i class="fas fa-server me-2"></i>{{ t('select_server') }}</h5>
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="serverRegion" id="europe" value="europe" checked>
+                                <label class="form-check-label" for="europe">
+                                    <i class="fas fa-flag me-1"></i>{{ t('server_europe') }}
+                                </label>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="serverRegion" id="america" value="america">
+                                <label class="form-check-label" for="america">
+                                    <i class="fas fa-flag-usa me-1"></i>{{ t('server_america') }}
+                                </label>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="serverRegion" id="asia" value="asia">
+                                <label class="form-check-label" for="asia">
+                                    <i class="fas fa-flag me-1"></i>{{ t('server_asia') }}
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- 服务器信息提示 -->
+                    <div class="mt-3">
+                        <div class="alert alert-info d-flex align-items-center mb-0" role="alert">
+                            <i class="fas fa-info-circle me-2 fs-5"></i>
+                            <div>
+                                <span>{{ t('sftp_path_notice').replace('{path}', '<strong>' + sftp_remote_dir + '</strong>')|safe }}</span>
+                                <span class="ms-2 fw-bold" id="currentServerInfo"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 脱敏设置（隐藏） -->
+                <div class="card mb-4" style="display: none;">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="fas fa-cog me-2"></i>{{ t('settings_title') }}</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="form-check form-switch mb-3">
+                            <input class="form-check-input" type="checkbox" id="enableAnonymization" checked>
+                            <label class="form-check-label" for="enableAnonymization">
+                                <strong>{{ t('enable_anonymization') }}</strong>
+                            </label>
+                        </div>
+                        
+                        <div id="anonymizationOptions">
+                            <div class="row">
+                                <div class="col-md-3">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="blurFaces" checked>
+                                        <label class="form-check-label" for="blurFaces">
+                                            <i class="fas fa-user me-1"></i>{{ t('face_blur') }}
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="blurPlates" checked>
+                                        <label class="form-check-label" for="blurPlates">
+                                            <i class="fas fa-car me-1"></i>{{ t('plate_blur') }}
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="blurTexts" checked>
+                                        <label class="form-check-label" for="blurTexts">
+                                            <i class="fas fa-font me-1"></i>{{ t('text_blur') }}
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <select class="form-select" id="blurMethod">
+                                        <option value="gaussian">{{ t('blur_gaussian') }}</option>
+                                        <option value="pixelate">{{ t('blur_pixelate') }}</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 文件上传区域 -->
+                <form id="uploadForm" enctype="multipart/form-data">
+                    <!-- 选择模式：文件 或 文件夹 -->
+                    <div class="mb-3 d-flex align-items-center gap-3">
+                        <label class="me-2 mb-0"><i class="fas fa-folder me-1"></i>{{ t('pick_mode') }}</label>
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="radio" name="pickMode" id="modeFile" value="file" checked>
+                            <label class="form-check-label" for="modeFile">{{ t('pick_file') }}</label>
+                        </div>
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="radio" name="pickMode" id="modeFolder" value="folder">
+                            <label class="form-check-label" for="modeFolder">{{ t('pick_folder') }}</label>
+                        </div>
+                        <small class="text-muted">{{ t('pick_hint') }}</small>
+                    </div>
+                    <div class="upload-area" id="uploadArea">
+                        <i class="fas fa-cloud-upload-alt fa-3x text-muted mb-3"></i>
+                        <h4>{{ t('upload_drop_hint') }}</h4>
+                        <p class="text-muted">{{ t('upload_types_hint') }}</p>
+                        <input type="file" id="fileInput" multiple accept="image/*" style="display: none;">
+                        <button type="button" class="btn btn-outline-primary" id="selectFileBtn">
+                            <i class="fas fa-folder-open me-2"></i>{{ t('select_files_btn') }}
+                        </button>
+                    </div>
+
+                    <!-- 已选择文件统计 -->
+                    <div id="selectedFilesArea" class="mt-3" style="display: none;">
+                        <div class="card">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <h6 class="mb-1"><i class="fas fa-file me-2"></i>{{ t('selected_files') }}</h6>
+                                        <div class="d-flex align-items-center gap-3">
+                                            <span class="text-muted">
+                                                <i class="fas fa-file-image me-1"></i>
+                                                <span id="fileCount">0</span> <span id="filesUnit">{{ t('files_unit') }}</span>
+                                            </span>
+                                            <span class="text-muted">
+                                                <i class="fas fa-hdd me-1"></i>
+                                                {{ t('total_size') }}: <span id="totalSize">0 B</span>
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <span id="fileCountBadge" class="badge bg-primary fs-6"></span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 上传按钮 -->
+                    <div class="text-center mt-4">
+                        <button type="submit" class="btn btn-primary btn-lg" id="uploadBtn" disabled>
+                            <i class="fas fa-upload me-2"></i>{{ t('start_btn') }}
+                        </button>
+                    </div>
+                </form>
+
+                <!-- 进度条 -->
+                <div class="progress-container">
+                    <div class="progress">
+                        <div class="progress-bar" role="progressbar" style="width: 0%"></div>
+                    </div>
+                    <div class="text-center mt-2">
+                        <span id="progressText">{{ t('processing') }}</span>
+                    </div>
+                </div>
+
+                <!-- 结果区域 -->
+                <div id="resultArea" class="mt-4" style="display: none;">
+                    <div class="alert alert-success">
+                        <h5 class="mb-0"><i class="fas fa-check-circle me-2"></i><span id="resultText"></span></h5>
+                    </div>
+                </div>
+
+                <!-- 后台任务队列 -->
+                <div id="taskQueueArea" class="mt-4" style="display: none;">
+                    <h5><i class="fas fa-tasks me-2"></i>{{ t('task_queue_title') }}</h5>
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>{{ t('task_id') }}</th>
+                                <th>{{ t('task_status') }}</th>
+                            </tr>
+                        </thead>
+                        <tbody id="taskQueueBody">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 功能介绍 -->
+    <div class="row mt-5">
+        <div class="col-md-4">
+            <div class="card feature-card h-100">
+                <div class="card-body text-center">
+                    <i class="fas fa-user-secret fa-3x text-primary mb-3"></i>
+                    <h5>{{ t('banner_face_title') }}</h5>
+                    <p>{{ t('banner_face_desc') }}</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card feature-card h-100">
+                <div class="card-body text-center">
+                    <i class="fas fa-car fa-3x text-success mb-3"></i>
+                    <h5>{{ t('banner_plate_title') }}</h5>
+                    <p>{{ t('banner_plate_desc') }}</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card feature-card h-100">
+                <div class="card-body text-center">
+                    <i class="fas fa-font fa-3x text-warning mb-3"></i>
+                    <h5>{{ t('banner_text_title') }}</h5>
+                    <p>{{ t('banner_text_desc') }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // 本地化消息
+    const MSG_PLEASE_SELECT = "{{ t('please_select_files') }}";
+    const MSG_MORE_NOT_SHOWN = "{{ t('more_not_shown') }}"; // contains {n}
+    const MSG_UPLOADED_PROCESSING = "{{ t('uploaded_processing') }}";
+    const MSG_COMPLETED = "{{ t('completed') }}";
+    const MSG_PROCESSING_FAILED = "{{ t('processing_failed') }}";
+    const MSG_START = "{{ t('start_btn') }}";
+    const MSG_PROCESSING_PERCENT = "{{ t('processing_percent') }}"; // contains {p}
+    const MSG_PROCESSED_COUNT = "{{ t('processed_count') }}"; // contains {n}
+    const MSG_SFTP_PROMPT = "{{ t('sftp_prompt') }}";
+    const MSG_SFTP_CONNECTING = "{{ t('sftp_connecting') }}";
+    const MSG_SFTP_CONN_FAIL = "{{ t('sftp_conn_fail') }}";
+    const MSG_SFTP_REQ_FAIL = "{{ t('sftp_req_fail') }}";
+    const MSG_UPLOAD_SUCCESS_PROCESSING = "{{ t('upload_success_processing') }}";
+    const MSG_TASK_QUEUED = "{{ t('task_status_queued') }}";
+    const MSG_TASK_PROCESSING = "{{ t('task_status_processing') }}";
+    const MSG_TASK_COMPLETED = "{{ t('task_status_completed') }}";
+    const MSG_TASK_ERROR = "{{ t('task_status_error') }}";
+    const MSG_SFTP_DISCONNECT = "{{ t('sftp_disconnect') }}";
+    const MSG_SFTP_TEST = "{{ t('sftp_test') }}";
+    const MSG_UPLOAD_SUCCESS = "{{ t('upload_success') }}";
+    const MSG_SELECTED_FILES = "{{ t('selected_files') }}";
+    const MSG_FILE_COUNT = "{{ t('file_count') }}";
+    const MSG_TOTAL_SIZE = "{{ t('total_size') }}";
+    const MSG_FILES_UNIT = "{{ t('files_unit') }}";
+    const MSG_NO_FILES_SELECTED = "{{ t('no_files_selected') }}";
+    const MSG_CURRENT_SELECTED = "{{ t('current_selected') }}";
+    const MSG_SERVER_EUROPE = "{{ t('server_europe') }}";
+    const MSG_SERVER_AMERICA = "{{ t('server_america') }}";
+    const MSG_SERVER_ASIA = "{{ t('server_asia') }}";
+    // 语言切换
+    const langSelect = document.getElementById('langSelect');
+    if (langSelect) {
+        langSelect.addEventListener('change', function() {
+            const url = new URL(window.location.href);
+            url.searchParams.set('lang', this.value);
+            window.location.href = url.toString();
+        });
+    }
+    // 显示隐私协议
+    const privacyModal = new bootstrap.Modal(document.getElementById('privacyModal'));
+    privacyModal.show();
+
+    // 同意隐私协议
+    document.getElementById('acceptPrivacy').addEventListener('click', function() {
+        privacyModal.hide();
+        document.getElementById('mainContent').style.display = 'block';
+    });
+
+    // 更新当前选择的服务器信息
+    function updateServerInfo() {
+        const currentServerInfo = document.getElementById('currentServerInfo');
+        if (!currentServerInfo) return;
+        
+        const selectedRegion = document.querySelector('input[name="serverRegion"]:checked').value;
+        const regionNames = {
+            'europe': MSG_SERVER_EUROPE,
+            'america': MSG_SERVER_AMERICA,
+            'asia': MSG_SERVER_ASIA
+        };
+        currentServerInfo.textContent = `${MSG_CURRENT_SELECTED}: ${regionNames[selectedRegion]}`;
+    }
+    
+    // 当切换服务器时，更新信息提示
+    document.querySelectorAll('input[name="serverRegion"]').forEach(radio => {
+        radio.addEventListener('change', updateServerInfo);
+    });
+    
+    // 初始化显示
+    updateServerInfo();
+
+
+    // 文件上传相关
+    const uploadArea = document.getElementById('uploadArea');
+    const fileInput = document.getElementById('fileInput');
+    const modeFile = document.getElementById('modeFile');
+    const modeFolder = document.getElementById('modeFolder');
+
+    function applyPickMode() {
+        if (modeFolder && modeFolder.checked) {
+            // 启用选择文件夹（浏览器需支持 webkitdirectory）
+            fileInput.setAttribute('webkitdirectory', '');
+            fileInput.setAttribute('directory', '');
+            fileInput.setAttribute('multiple', '');
+            // 关键修复：移除文件类型限制，以允许选择文件夹
+            fileInput.removeAttribute('accept');
+        } else {
+            // 仅选择文件
+            fileInput.removeAttribute('webkitdirectory');
+            fileInput.removeAttribute('directory');
+            fileInput.setAttribute('multiple', '');
+            // 恢复文件类型限制
+            fileInput.setAttribute('accept', 'image/*');
+        }
+    }
+
+    if (modeFile && modeFolder) {
+        modeFile.addEventListener('change', applyPickMode);
+        modeFolder.addEventListener('change', applyPickMode);
+        // 初始化一次
+        applyPickMode();
+    }
+    const fileList = document.getElementById('fileList');
+    const uploadBtn = document.getElementById('uploadBtn');
+    const uploadForm = document.getElementById('uploadForm');
+    const progressContainer = document.querySelector('.progress-container');
+    const progressBar = document.querySelector('.progress-bar');
+    const progressText = document.getElementById('progressText');
+    const resultArea = document.getElementById('resultArea');
+
+    // 脱敏选项控制
+    const enableAnonymization = document.getElementById('enableAnonymization');
+    const anonymizationOptions = document.getElementById('anonymizationOptions');
+    
+    enableAnonymization.addEventListener('change', function() {
+        anonymizationOptions.style.display = this.checked ? 'block' : 'none';
+    });
+
+    // 拖拽上传
+    uploadArea.addEventListener('dragover', function(e) {
+        e.preventDefault();
+        uploadArea.classList.add('dragover');
+    });
+
+    uploadArea.addEventListener('dragleave', function(e) {
+        e.preventDefault();
+        uploadArea.classList.remove('dragover');
+    });
+
+    uploadArea.addEventListener('drop', async function(e) {
+        e.preventDefault();
+        uploadArea.classList.remove('dragover');
+
+        const dt = e.dataTransfer;
+        // 优先使用 DataTransferItem 以支持目录遍历
+        if (dt && dt.items && dt.items.length && dt.items[0].webkitGetAsEntry) {
+            const items = Array.from(dt.items);
+            const files = await collectFilesFromItems(items);
+            handleFiles(files);
+        } else {
+            // 回退到传统的 files 列表（仅文件拖拽可用）
+            const files = dt.files;
+            handleFiles(files);
+        }
+    });
+
+    uploadArea.addEventListener('click', function(e) {
+        // 只有点击上传区域本身时才触发，避免按钮双重触发
+        if (e.target === uploadArea || uploadArea.contains(e.target) && !e.target.closest('#selectFileBtn')) {
+            fileInput.click();
+        }
+    });
+
+    // 单独处理按钮点击
+    document.getElementById('selectFileBtn').addEventListener('click', function(e) {
+        e.stopPropagation(); // 阻止事件冒泡
+        fileInput.click();
+    });
+
+    // 当前选择的文件集合（支持文件或文件夹拖拽/选择）
+    let selectedFiles = [];
+
+    fileInput.addEventListener('change', function() {
+        handleFiles(this.files);
+    });
+
+    function formatFileSize(bytes) {
+        if (bytes === 0) return '0 B';
+        const k = 1024;
+        const sizes = ['B', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return `${(bytes / Math.pow(k, i)).toFixed(2)} ${sizes[i]}`;
+    }
+
+    // 递归读取目录内所有条目
+    async function readAllDirEntries(dirReader) {
+        const entries = [];
+        let batch;
+        do {
+            batch = await new Promise(resolve => dirReader.readEntries(resolve));
+            entries.push(...batch);
+        } while (batch.length);
+        return entries;
+    }
+
+    async function traverseEntry(entry) {
+        if (entry.isFile) {
+            return await new Promise(resolve => entry.file(file => resolve([file])));
+        }
+        if (entry.isDirectory) {
+            const reader = entry.createReader();
+            const entries = await readAllDirEntries(reader);
+            const nested = await Promise.all(entries.map(traverseEntry));
+            return nested.flat();
+        }
+        return [];
+    }
+
+    async function collectFilesFromItems(items) {
+        const all = await Promise.all(items.map(async (item) => {
+            const entry = item.webkitGetAsEntry ? item.webkitGetAsEntry() : null;
+            if (entry) {
+                return await traverseEntry(entry);
+            }
+            const f = item.getAsFile ? item.getAsFile() : null;
+            return f ? [f] : [];
+        }));
+        return all.flat();
+    }
+
+    // 按钮状态管理函数
+    function setUploadButtonState(state) {
+        const btn = uploadBtn;
+        switch(state) {
+            case 'ready':
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-upload me-2"></i>' + MSG_START;
+                btn.classList.remove('btn-success', 'btn-danger');
+                btn.classList.add('btn-primary');
+                break;
+            case 'uploading':
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>' + "{{ t('processing') }}";
+                btn.classList.remove('btn-success', 'btn-danger');
+                btn.classList.add('btn-primary');
+                break;
+            case 'success':
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-check-circle me-2"></i>' + MSG_UPLOAD_SUCCESS;
+                btn.classList.remove('btn-primary', 'btn-danger');
+                btn.classList.add('btn-success');
+                break;
+            case 'error':
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-exclamation-circle me-2"></i>' + MSG_PROCESSING_FAILED;
+                btn.classList.remove('btn-primary', 'btn-success');
+                btn.classList.add('btn-danger');
+                break;
+        }
+    }
+
+    function handleFiles(files) {
+        if (files.length === 0) {
+            // 如果没有文件，隐藏文件列表区域
+            document.getElementById('selectedFilesArea').style.display = 'none';
+            return;
+        }
+
+        // 标准化为数组并保存（用于实际上传）
+        selectedFiles = Array.from(files);
+
+        // 显示文件列表
+        displaySelectedFiles();
+
+        // 激活上传按钮，恢复为"开始上传"状态
+        setUploadButtonState('ready');
+    }
+
+    function displaySelectedFiles() {
+        const filesArea = document.getElementById('selectedFilesArea');
+        const fileCount = document.getElementById('fileCount');
+        const fileCountBadge = document.getElementById('fileCountBadge');
+        const totalSize = document.getElementById('totalSize');
+        const filesUnit = document.getElementById('filesUnit');
+        
+        if (selectedFiles.length === 0) {
+            filesArea.style.display = 'none';
+            return;
+        }
+
+        // 显示文件统计区域
+        filesArea.style.display = 'block';
+        
+        // 计算总文件大小
+        let totalBytes = 0;
+        selectedFiles.forEach(file => {
+            totalBytes += file.size;
+        });
+        
+        // 更新文件数量
+        const count = selectedFiles.length;
+        fileCount.textContent = count;
+        fileCountBadge.textContent = count;
+        
+        // 更新文件单位（支持语言切换）
+        if (filesUnit) {
+            filesUnit.textContent = MSG_FILES_UNIT;
+        }
+        
+        // 更新总大小
+        totalSize.textContent = formatFileSize(totalBytes);
+    }
+
+    // --- 任务队列与连续上传逻辑 ---
+    let taskQueue = [];
+    let pollerInterval = null;
+    const taskQueueArea = document.getElementById('taskQueueArea');
+    const taskQueueBody = document.getElementById('taskQueueBody');
+
+    // 渲染任务队列
+    function renderTaskQueue() {
+        if (taskQueue.length > 0) {
+            taskQueueArea.style.display = 'block';
+        }
+        taskQueueBody.innerHTML = '';
+        taskQueue.forEach(task => {
+            const row = document.createElement('tr');
+            let statusText = '';
+            let statusClass = '';
+
+            switch (task.status) {
+                case 'uploading':
+                    statusText = `上传中: ${task.progress}%`;
+                    statusClass = 'text-primary';
+                    break;
+                case 'queued':
+                    statusText = MSG_TASK_QUEUED;
+                    statusClass = 'text-secondary';
+                    break;
+                case 'processing':
+                    statusText = MSG_TASK_PROCESSING;
+                    statusClass = 'text-info';
+                    break;
+                case 'completed':
+                    statusText = MSG_TASK_COMPLETED;
+                    statusClass = 'text-success';
+                    break;
+                case 'error':
+                    statusText = task.error || MSG_TASK_ERROR;
+                    statusClass = 'text-danger';
+                    break;
+            }
+            row.innerHTML = `<td>${task.id.substring(0, 8)}...</td><td class="${statusClass}">${statusText}</td>`;
+            taskQueueBody.appendChild(row);
+        });
+    }
+
+    // 轮询器
+    async function pollTasks() {
+        let hasActiveTasks = false;
+        let hasCompletedTasks = false;
+        for (const task of taskQueue) {
+            if (task.status === 'queued' || task.status === 'processing') {
+                hasActiveTasks = true;
+                try {
+                    const response = await fetch(`/api/status/${task.id}`);
+                    const data = await response.json();
+                    task.status = data.status; // 'processing', 'completed', or 'error'
+                    if(data.status === 'error') {
+                        task.error = data.error;
+                    } else if(data.status === 'completed') {
+                        hasCompletedTasks = true;
+                    }
+                } catch (e) {
+                    task.status = 'error';
+                    task.error = '轮询失败';
+                }
+            } else if (task.status === 'completed') {
+                hasCompletedTasks = true;
+            }
+        }
+        renderTaskQueue();
+        
+        // 如果有任务完成且没有活动任务，更新按钮状态为成功
+        if (hasCompletedTasks && !hasActiveTasks) {
+            setUploadButtonState('success');
+        }
+        
+        if (!hasActiveTasks) {
+            clearInterval(pollerInterval);
+            pollerInterval = null;
+        }
+    }
+
+    function startPoller() {
+        if (!pollerInterval) {
+            pollerInterval = setInterval(pollTasks, 2000);
+        }
+    }
+
+    // 表单提交
+    uploadForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        const files = selectedFiles;
+        if (files.length === 0) {
+            alert(MSG_PLEASE_SELECT);
+            return;
+        }
+        // SFTP凭据已内置在配置中，根据选择的服务器区域自动使用
+
+        const taskId = `upload-${Date.now()}`;
+        const task = { id: taskId, status: 'uploading', progress: 0 };
+        taskQueue.push(task);
+        renderTaskQueue();
+
+        // 恢复主进度条显示
+        progressContainer.style.display = 'block';
+        progressBar.style.width = '0%';
+        progressText.textContent = '准备上传...';
+        setUploadButtonState('uploading');
+
+        const formData = new FormData();
+        files.forEach(file => formData.append('files', file));
+        const serverRegion = document.querySelector('input[name="serverRegion"]:checked').value;
+        formData.append('enable_anonymization', true);
+        formData.append('server_region', serverRegion);
+        formData.append('blur_face_plates', true);
+        formData.append('blur_texts', true);
+        formData.append('blur_method', 'gaussian');
+        // SFTP凭据由后端根据server_region自动获取，无需前端传递
+
+        const xhr = new XMLHttpRequest();
+        xhr.open('POST', '/api/upload', true);
+
+        xhr.upload.onprogress = function(e) {
+            if (e.lengthComputable) {
+                const percentComplete = Math.round((e.loaded / e.total) * 100);
+                task.progress = percentComplete;
+                renderTaskQueue();
+
+                // 同步更新主进度条
+                progressBar.style.width = percentComplete + '%';
+                progressText.textContent = `上传中: ${percentComplete}%`;
+            }
+        };
+
+        xhr.onload = function() {
+            if (xhr.status === 200) {
+                const result = JSON.parse(xhr.responseText);
+                task.id = result.session_id; // 更新为真实的后台任务ID
+                task.status = 'queued'; // 上传完成，进入队列
+                renderTaskQueue();
+                startPoller();
+                // 上传成功，显示成功状态
+                setUploadButtonState('success');
+            } else {
+                task.status = 'error';
+                task.error = '上传失败';
+                renderTaskQueue();
+                setUploadButtonState('error');
+            }
+        };
+
+        xhr.onerror = function() {
+            task.status = 'error';
+            task.error = '网络错误';
+            renderTaskQueue();
+            setUploadButtonState('error');
+        };
+
+        xhr.send(formData);
+
+        // 重置文件选择以便连续上传（但保持按钮状态）
+        fileInput.value = '';
+        selectedFiles = [];
+        // 隐藏文件列表区域
+        document.getElementById('selectedFilesArea').style.display = 'none';
+    });
+});
+</script>
+{% endblock %}

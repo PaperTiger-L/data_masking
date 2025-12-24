@@ -1,0 +1,15 @@
+# 统一模糊器的配置文件
+# 改编自 dashcam_anonymizer
+
+# YOLOv8 模型路径 (相对于项目根目录)
+model_path: 'models/best.pt'
+
+# 目标检测的置信度阈值
+detection_conf_thresh: 0.1
+
+# 高斯模糊的半径 (必须是奇数)
+blur_radius: 11
+
+# 是否使用GPU (如果可用)
+gpu_avail: True
+

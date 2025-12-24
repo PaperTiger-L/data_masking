@@ -1,0 +1,43 @@
+2025-12-24 13:59:26 | INFO | __main__:<module>:743 | 日志系统已初始化，日志文件: /home/user/Code/Cursor/数据脱敏/data_desensitive/logs/app.log
+2025-12-24 13:59:41 | INFO | app:upload_files:658 | 会话 0954ede7-6c09-4062-84fb-9847e6963601: 已接收 11 个文件，即将启动后台处理。
+2025-12-24 13:59:41 | INFO | app:upload_files:667 | 会话 0954ede7-6c09-4062-84fb-9847e6963601: 使用服务器区域 asia，SFTP主机: 192.168.51.11
+2025-12-24 13:59:41 | INFO | app:process_and_upload_in_background:183 | 后台任务 0954ede7-6c09-4062-84fb-9847e6963601 开始：处理 11 个文件
+2025-12-24 13:59:41 | INFO | app:get_unified_blurrer:105 | 统一检测器初始化完成
+2025-12-24 13:59:41 | INFO | src.pipeline.unified_blurrer:process_image:73 | 在 isp_left_235421.jpg 中检测到 1 个目标，准备进行模糊处理。
+2025-12-24 13:59:42 | INFO | app:get_text_blurrer:124 | 文本检测器初始化完成
+2025-12-24 13:59:42 | INFO | src.pipeline.unified_blurrer:process_image:73 | 在 1762159550.807924.jpg 中检测到 2 个目标，准备进行模糊处理。
+2025-12-24 13:59:43 | INFO | src.pipeline.unified_blurrer:process_image:73 | 在 isp_left_279922.jpg 中检测到 2 个目标，准备进行模糊处理。
+2025-12-24 13:59:43 | INFO | src.pipeline.unified_blurrer:process_image:73 | 在 isp_right_902306.jpg 中检测到 1 个目标，准备进行模糊处理。
+2025-12-24 13:59:44 | INFO | src.pipeline.unified_blurrer:process_image:73 | 在 isp_left_91791.jpg 中检测到 1 个目标，准备进行模糊处理。
+2025-12-24 13:59:44 | INFO | src.pipeline.unified_blurrer:process_image:73 | 在 1762159443.007596.jpg 中检测到 1 个目标，准备进行模糊处理。
+2025-12-24 13:59:45 | INFO | src.pipeline.unified_blurrer:process_image:73 | 在 1762159680.909014.jpg 中检测到 2 个目标，准备进行模糊处理。
+2025-12-24 13:59:45 | INFO | src.pipeline.unified_blurrer:process_image:73 | 在 1762159443.807604.jpg 中检测到 3 个目标，准备进行模糊处理。
+2025-12-24 13:59:46 | INFO | src.pipeline.unified_blurrer:process_image:73 | 在 isp_right_134109.jpg 中检测到 2 个目标，准备进行模糊处理。
+2025-12-24 13:59:46 | INFO | src.pipeline.unified_blurrer:process_image:73 | 在 1762159441.207599.jpg 中检测到 4 个目标，准备进行模糊处理。
+2025-12-24 13:59:47 | INFO | src.pipeline.unified_blurrer:process_image:73 | 在 isp_right_1382623.jpg 中检测到 1 个目标，准备进行模糊处理。
+2025-12-24 13:59:47 | INFO | app:process_and_upload_in_background:212 | 任务 0954ede7-6c09-4062-84fb-9847e6963601: 所有文件处理完成。共处理 11 个文件。
+2025-12-24 13:59:47 | INFO | app:process_and_upload_in_background:215 | 任务 0954ede7-6c09-4062-84fb-9847e6963601: 检测到 SFTP 登录信息，开始上传...
+2025-12-24 13:59:48 | INFO | app:upload_file_sftp:143 | 远程目录 /mnt/data/20251224_135941_AS 不存在，正在创建...
+2025-12-24 13:59:48 | INFO | app:upload_file_sftp:146 | 正在上传 temp/0954ede7-6c09-4062-84fb-9847e6963601/output/isp_left_235421.jpg 到 192.168.51.11:/mnt/data/20251224_135941_AS/isp_left_235421.jpg
+2025-12-24 13:59:48 | INFO | app:upload_file_sftp:148 | 上传成功: /mnt/data/20251224_135941_AS/isp_left_235421.jpg
+2025-12-24 13:59:48 | INFO | app:upload_file_sftp:146 | 正在上传 temp/0954ede7-6c09-4062-84fb-9847e6963601/output/1762159550.807924.jpg 到 192.168.51.11:/mnt/data/20251224_135941_AS/1762159550.807924.jpg
+2025-12-24 13:59:48 | INFO | app:upload_file_sftp:148 | 上传成功: /mnt/data/20251224_135941_AS/1762159550.807924.jpg
+2025-12-24 13:59:49 | INFO | app:upload_file_sftp:146 | 正在上传 temp/0954ede7-6c09-4062-84fb-9847e6963601/output/isp_left_279922.jpg 到 192.168.51.11:/mnt/data/20251224_135941_AS/isp_left_279922.jpg
+2025-12-24 13:59:49 | INFO | app:upload_file_sftp:148 | 上传成功: /mnt/data/20251224_135941_AS/isp_left_279922.jpg
+2025-12-24 13:59:49 | INFO | app:upload_file_sftp:146 | 正在上传 temp/0954ede7-6c09-4062-84fb-9847e6963601/output/isp_right_902306.jpg 到 192.168.51.11:/mnt/data/20251224_135941_AS/isp_right_902306.jpg
+2025-12-24 13:59:49 | INFO | app:upload_file_sftp:148 | 上传成功: /mnt/data/20251224_135941_AS/isp_right_902306.jpg
+2025-12-24 13:59:50 | INFO | app:upload_file_sftp:146 | 正在上传 temp/0954ede7-6c09-4062-84fb-9847e6963601/output/isp_left_91791.jpg 到 192.168.51.11:/mnt/data/20251224_135941_AS/isp_left_91791.jpg
+2025-12-24 13:59:50 | INFO | app:upload_file_sftp:148 | 上传成功: /mnt/data/20251224_135941_AS/isp_left_91791.jpg
+2025-12-24 13:59:50 | INFO | app:upload_file_sftp:146 | 正在上传 temp/0954ede7-6c09-4062-84fb-9847e6963601/output/1762159443.007596.jpg 到 192.168.51.11:/mnt/data/20251224_135941_AS/1762159443.007596.jpg
+2025-12-24 13:59:50 | INFO | app:upload_file_sftp:148 | 上传成功: /mnt/data/20251224_135941_AS/1762159443.007596.jpg
+2025-12-24 13:59:50 | INFO | app:upload_file_sftp:146 | 正在上传 temp/0954ede7-6c09-4062-84fb-9847e6963601/output/1762159680.909014.jpg 到 192.168.51.11:/mnt/data/20251224_135941_AS/1762159680.909014.jpg
+2025-12-24 13:59:50 | INFO | app:upload_file_sftp:148 | 上传成功: /mnt/data/20251224_135941_AS/1762159680.909014.jpg
+2025-12-24 13:59:51 | INFO | app:upload_file_sftp:146 | 正在上传 temp/0954ede7-6c09-4062-84fb-9847e6963601/output/1762159443.807604.jpg 到 192.168.51.11:/mnt/data/20251224_135941_AS/1762159443.807604.jpg
+2025-12-24 13:59:51 | INFO | app:upload_file_sftp:148 | 上传成功: /mnt/data/20251224_135941_AS/1762159443.807604.jpg
+2025-12-24 13:59:51 | INFO | app:upload_file_sftp:146 | 正在上传 temp/0954ede7-6c09-4062-84fb-9847e6963601/output/isp_right_134109.jpg 到 192.168.51.11:/mnt/data/20251224_135941_AS/isp_right_134109.jpg
+2025-12-24 13:59:51 | INFO | app:upload_file_sftp:148 | 上传成功: /mnt/data/20251224_135941_AS/isp_right_134109.jpg
+2025-12-24 13:59:51 | INFO | app:upload_file_sftp:146 | 正在上传 temp/0954ede7-6c09-4062-84fb-9847e6963601/output/1762159441.207599.jpg 到 192.168.51.11:/mnt/data/20251224_135941_AS/1762159441.207599.jpg
+2025-12-24 13:59:51 | INFO | app:upload_file_sftp:148 | 上传成功: /mnt/data/20251224_135941_AS/1762159441.207599.jpg
+2025-12-24 13:59:52 | INFO | app:upload_file_sftp:146 | 正在上传 temp/0954ede7-6c09-4062-84fb-9847e6963601/output/isp_right_1382623.jpg 到 192.168.51.11:/mnt/data/20251224_135941_AS/isp_right_1382623.jpg
+2025-12-24 13:59:52 | INFO | app:upload_file_sftp:148 | 上传成功: /mnt/data/20251224_135941_AS/isp_right_1382623.jpg
+2025-12-24 13:59:52 | INFO | app:process_and_upload_in_background:235 | 已清理临时目录: temp/0954ede7-6c09-4062-84fb-9847e6963601
