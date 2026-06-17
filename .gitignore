@@ -1,0 +1,13 @@
+__pycache__/
+*.py[cod]
+
+.venv/
+.vscode/
+
+logs/
+temp/
+uploads/
+output/
+
+.env
+.env.*

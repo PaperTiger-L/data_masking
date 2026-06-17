@@ -5,10 +5,10 @@
 # ============================================================================
 # Web Framework and Server
 # ============================================================================
-fastapi>=0.104.0
-uvicorn[standard]>=0.24.0
-python-multipart>=0.0.6
-jinja2>=3.1.2
+fastapi
+uvicorn[standard]
+python-multipart
+jinja2
 
 # ============================================================================
 # Deep Learning Framework (CPU-optimized)
@@ -21,7 +21,7 @@ torchvision==0.18.1+cpu
 # ============================================================================
 # Computer Vision and Image Processing
 # ============================================================================
-opencv-python>=4.8.0
+opencv-python-headless==4.12.0.88
 numpy>=1.24.0
 Pillow>=10.0.0
 

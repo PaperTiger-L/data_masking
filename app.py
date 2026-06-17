@@ -64,6 +64,13 @@ REGION_MAP = {
     "asia": "AS",
 }
 
+def _normalize_sftp_value(value: Optional[str]) -> str:
+    return value.strip() if isinstance(value, str) else ""
+
+
+def _is_sftp_configured(host: Optional[str], user: Optional[str], a_pass: Optional[str]) -> bool:
+    return all(_normalize_sftp_value(value) for value in (host, user, a_pass))
+
 # 处理状态跟踪
 PROCESSING_SESSIONS = {}
 
@@ -165,6 +172,7 @@ def process_and_upload_in_background(
     sftp_user: Optional[str],
     sftp_pass: Optional[str],
     remote_dir_name: str,
+    storage_mode: str,
 ):
     """在后台处理所有文件并上传"""
     if session_id not in PROCESSING_SESSIONS:
@@ -176,6 +184,11 @@ def process_and_upload_in_background(
     output_dir = session_dir / "output"
     output_dir.mkdir(exist_ok=True)
     processed_files_count = 0
+    final_output_dir = Path(SFTP_REMOTE_DIR) / remote_dir_name
+    final_output_dir_str = str(final_output_dir)
+
+    PROCESSING_SESSIONS[session_id]['storage_mode'] = storage_mode
+    PROCESSING_SESSIONS[session_id]['output_path'] = final_output_dir_str
 
     def _is_image(p: Path) -> bool:
         return p.suffix.lower() in ['.jpg', '.jpeg', '.png', '.bmp', '.tiff']
@@ -211,19 +224,22 @@ def process_and_upload_in_background(
 
         logger.info(f"任务 {session_id}: 所有文件处理完成。共处理 {processed_files_count} 个文件。")
 
-        if sftp_host and sftp_user and sftp_pass:
+        if storage_mode == 'sftp' and _is_sftp_configured(sftp_host, sftp_user, sftp_pass):
             logger.info(f"任务 {session_id}: 检测到 SFTP 登录信息，开始上传...")
-            remote_target_dir = os.path.join(SFTP_REMOTE_DIR, remote_dir_name)
-            
+            remote_target_dir = str(final_output_dir)
+
             for f in output_dir.iterdir():
                 if f.is_file():
                     upload_file_sftp(sftp_host, sftp_user, sftp_pass, str(f), remote_target_dir, f.name)
-            PROCESSING_SESSIONS[session_id]['status'] = 'completed'
-            PROCESSING_SESSIONS[session_id]['processed_files'] = processed_files_count
         else:
-            logger.warning(f"任务 {session_id}: 未提供 SFTP 登录信息，文件将不会被上传。")
-            PROCESSING_SESSIONS[session_id]['status'] = 'error'
-            PROCESSING_SESSIONS[session_id]['error'] = '未提供SFTP登录信息'
+            logger.warning(f"任务 {session_id}: 未配置 SFTP，结果将保存到本机目录 {final_output_dir_str}")
+            final_output_dir.mkdir(parents=True, exist_ok=True)
+            for f in output_dir.iterdir():
+                if f.is_file():
+                    shutil.copy2(f, final_output_dir / f.name)
+
+        PROCESSING_SESSIONS[session_id]['status'] = 'completed'
+        PROCESSING_SESSIONS[session_id]['processed_files'] = processed_files_count
 
     except Exception as e:
         logger.error(f"后台任务 {session_id} 发生致命错误: {e}")
@@ -639,7 +655,9 @@ async def upload_files(
     PROCESSING_SESSIONS[session_id] = {
         "status": "queued",
         "error": None,
-        "processed_files": 0
+        "processed_files": 0,
+        "storage_mode": None,
+        "output_path": None,
     }
 
     input_dir = session_dir / "input"
@@ -660,11 +678,12 @@ async def upload_files(
     # 根据服务器区域自动获取SFTP凭据
     region_config = SERVER_REGIONS.get(server_region, SERVER_REGIONS["europe"])
     sftp_config = region_config.get("sftp", {})
-    sftp_host = sftp_config.get("host")
-    sftp_user = sftp_config.get("user")
-    sftp_pass = sftp_config.get("password")
-    
-    logger.info(f"会话 {session_id}: 使用服务器区域 {server_region}，SFTP主机: {sftp_host}")
+    sftp_host = _normalize_sftp_value(sftp_config.get("host"))
+    sftp_user = _normalize_sftp_value(sftp_config.get("user"))
+    sftp_pass = _normalize_sftp_value(sftp_config.get("password"))
+    storage_mode = "sftp" if _is_sftp_configured(sftp_host, sftp_user, sftp_pass) else "local"
+
+    logger.info(f"会话 {session_id}: 使用服务器区域 {server_region}，存储模式: {storage_mode}，SFTP主机: {sftp_host or 'local'}")
 
     ts = datetime.now().strftime("%Y%m%d_%H%M%S")
     region_code = REGION_MAP.get(server_region, "XX")
@@ -681,7 +700,8 @@ async def upload_files(
         sftp_host=sftp_host,
         sftp_user=sftp_user,
         sftp_pass=sftp_pass,
-        remote_dir_name=remote_dir_name
+        remote_dir_name=remote_dir_name,
+        storage_mode=storage_mode,
     )
 
     return JSONResponse({"success": True, "session_id": session_id})

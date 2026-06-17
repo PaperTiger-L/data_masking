@@ -625,7 +625,11 @@ document.addEventListener('DOMContentLoaded', function() {
                     statusClass = 'text-info';
                     break;
                 case 'completed':
-                    statusText = MSG_TASK_COMPLETED;
+                    if (task.storageMode === 'local' && task.outputPath) {
+                        statusText = `${MSG_TASK_COMPLETED}（已保存到本机: ${task.outputPath}）`;
+                    } else {
+                        statusText = MSG_TASK_COMPLETED;
+                    }
                     statusClass = 'text-success';
                     break;
                 case 'error':
@@ -649,6 +653,8 @@ document.addEventListener('DOMContentLoaded', function() {
                     const response = await fetch(`/api/status/${task.id}`);
                     const data = await response.json();
                     task.status = data.status; // 'processing', 'completed', or 'error'
+                    task.storageMode = data.storage_mode || null;
+                    task.outputPath = data.output_path || null;
                     if(data.status === 'error') {
                         task.error = data.error;
                     } else if(data.status === 'completed') {

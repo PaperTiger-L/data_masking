@@ -86,29 +86,29 @@ SERVER_REGIONS = {
         "description": "符合GDPR规范，适合欧洲用户",
         "flag": "🇪🇺",
         "sftp": {
-            "host": os.getenv("EU_SFTP_HOST", "europe.example.com"),
-            "user": os.getenv("EU_SFTP_USER", "europe_user"),
-            "password": os.getenv("EU_SFTP_PASSWORD", "europe_password")
+            "host": os.getenv("EU_SFTP_HOST", "").strip(),
+            "user": os.getenv("EU_SFTP_USER", "").strip(),
+            "password": os.getenv("EU_SFTP_PASSWORD", "").strip()
         }
     },
     "america": {
-        "name": "美国服务器", 
+        "name": "美国服务器",
         "description": "高速稳定，适合美洲用户",
         "flag": "🇺🇸",
         "sftp": {
-            "host": os.getenv("US_SFTP_HOST", "america.example.com"),
-            "user": os.getenv("US_SFTP_USER", "america_user"),
-            "password": os.getenv("US_SFTP_PASSWORD", "america_password")
+            "host": os.getenv("US_SFTP_HOST", "").strip(),
+            "user": os.getenv("US_SFTP_USER", "").strip(),
+            "password": os.getenv("US_SFTP_PASSWORD", "").strip()
         }
     },
     "asia": {
         "name": "亚洲服务器",
-        "description": "低延迟访问，适合亚太用户", 
+        "description": "低延迟访问，适合亚太用户",
         "flag": "🌏",
         "sftp": {
-            "host": os.getenv("AS_SFTP_HOST", "192.168.51.11"),
-            "user": os.getenv("AS_SFTP_USER", "rockibot"),
-            "password": os.getenv("AS_SFTP_PASSWORD", "rockibot08")
+            "host": os.getenv("AS_SFTP_HOST", "").strip(),
+            "user": os.getenv("AS_SFTP_USER", "").strip(),
+            "password": os.getenv("AS_SFTP_PASSWORD", "").strip()
         }
     }
 }
