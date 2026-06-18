@@ -63,7 +63,7 @@ class TextBlurrer:
             from utils import util as dutil  # type: ignore
         except Exception as e:
             raise ImportError(
-                f"无法从 {self.dbnet_root} 导入 DBNet 依赖，请确认仓库存在且可用"
+                f"无法从 {self.dbnet_root} 导入 DBNet 依赖: {e}"
             ) from e
         self.dbnn = dbnn
         self.dutil = dutil
