@@ -12,7 +12,6 @@
 - **隐私保护**: 本地处理，处理后的数据上传到所选服务器
 - **CPU优化**: 专为CPU环境优化，无需GPU即可运行
 - **容器化部署**: 支持Docker一键部署
-- **批量处理**: 支持命令行批量处理大量图像文件
 - **后台任务**: 异步处理，支持任务队列和状态查询
 - **多语言支持**: 支持中文和英文界面切换
 
@@ -21,7 +20,8 @@
 ### 前置要求
 
 - Python 3.9+
-- pip或 Conda
+- pip 或 Conda
+- 或 Docker 24+
 
 ### 安装步骤
 
@@ -52,19 +52,25 @@ src/DBNet/weights/
 
 #### 3. 配置服务器SFTP信息
 
-编辑 `config.py` 文件，配置各服务器区域的SFTP连接信息：
+编辑 `config/server_regions.yaml` 文件，配置各服务器区域的SFTP连接信息：
 
-```python
-SERVER_REGIONS = {
-    "europe": {
-        "sftp": {
-            "host": "europe.example.com",
-            "user": "username",
-            "password": "password"
-        }
-    },
-    # ... 其他服务器配置
-}
+```yaml
+europe:
+  name: "欧洲服务器"
+  description: "符合GDPR规范，适合欧洲用户"
+  flag: "🇪🇺"
+  sftp:
+    host: "europe.example.com"
+    user: "username"
+    password: "password"
+```
+
+也可以通过环境变量覆盖配置文件中的 SFTP 值：
+
+```bash
+EU_SFTP_HOST=europe.example.com
+EU_SFTP_USER=username
+EU_SFTP_PASSWORD=password
 ```
 
 #### 4. 启动服务
@@ -76,11 +82,42 @@ pip install -r requirements.txt
 python app.py
 ```
 
+默认访问地址：`http://127.0.0.1:9000`
+
+#### 5. Docker 部署
+
+```bash
+# 构建镜像
+docker build -t data-masking:latest .
+
+# 启动容器
+docker run --rm -p 9000:9000 \
+  -v $(pwd)/logs:/app/logs \
+  -v $(pwd)/staging:/app/staging \
+  -v $(pwd)/output:/app/output \
+  -v $(pwd)/data_masking.db:/app/data_masking.db \
+  data-masking:latest
+```
+
+容器默认监听 `9000` 端口，访问地址：`http://127.0.0.1:9000`
+
+如果云平台要求注入端口环境变量，可改用：
+
+```bash
+docker run --rm -p 9000:9000 \
+  -e PORT=9000 \
+  -v $(pwd)/logs:/app/logs \
+  -v $(pwd)/staging:/app/staging \
+  -v $(pwd)/output:/app/output \
+  -v $(pwd)/data_masking.db:/app/data_masking.db \
+  data-masking:latest python app.py
+```
+
 ## 使用指南
 
 ### Web界面使用
 
-1. **访问系统**: 打开浏览器访问 http://localhost:8000
+1. **访问系统**: 打开浏览器访问 http://localhost:9000
 
 2. **阅读隐私协议**: 首次访问需要阅读并同意隐私声明
 
@@ -89,7 +126,7 @@ python app.py
    - 美国服务器
    - 亚洲服务器
    
-   系统会自动使用对应区域的内置SFTP配置
+   系统会自动使用 `config/server_regions.yaml` 中对应区域的配置，并优先使用环境变量覆盖 SFTP 信息
 
 4. **选择文件或文件夹**: 
    - 支持拖拽上传
@@ -100,95 +137,83 @@ python app.py
 5. **开始上传**: 
    - 点击"开始上传"按钮
    - 系统会自动处理图像（人脸、车牌、文本脱敏）
-   - 处理完成后自动上传到所选服务器的 `/mnt/data` 目录
+   - 如果所选区域配置了完整 SFTP 信息，处理完成后会上传到对应服务器的 `/mnt/data` 目录
+   - 如果所选区域未配置完整 SFTP 信息，系统会自动回退到本机 `/mnt/data` 目录
    - 上传的文件会按时间戳和区域代码组织（格式：`YYYYMMDD_HHMMSS_区域代码/`）
    - 可以查看任务队列状态
 
 ## 配置说明
 
+### Docker 运行时目录
+
+容器内以下路径需要可写：
+
+- `/app/logs`：运行日志
+- `/app/staging`：上传暂存、解压、中间处理文件
+- `/app/output`：本机输出目录
+- `/app/data_masking.db`：SQLite 数据库
+- `/mnt/data`：当系统走本地落盘模式时的输出目录
+
+建议至少挂载：
+
+```bash
+-v $(pwd)/logs:/app/logs \
+-v $(pwd)/staging:/app/staging \
+-v $(pwd)/output:/app/output
+```
+
+如果你希望数据库持久化，也挂载：
+
+```bash
+-v $(pwd)/data_masking.db:/app/data_masking.db
+```
+
+### Docker 环境变量
+
+Docker 部署时可继续使用现有环境变量覆盖配置，例如：
+
+```bash
+PORT=9000
+SERVER_PORT=9000
+STAGING_ROOT=/app/staging
+SQLITE_DB_PATH=/app/data_masking.db
+EU_SFTP_HOST=europe.example.com
+EU_SFTP_USER=username
+EU_SFTP_PASSWORD=password
+US_SFTP_HOST=america.example.com
+US_SFTP_USER=username
+US_SFTP_PASSWORD=password
+AS_SFTP_HOST=asia.example.com
+AS_SFTP_USER=username
+AS_SFTP_PASSWORD=password
+```
+
+管理员密码仍然默认从 `config/server_regions.yaml` 读取。
+
 ### 配置文件
 
-主要配置文件位于 `config.py`，支持通过环境变量覆盖默认配置。
+主要配置入口位于 `config.py`，其中三台区域服务器配置从 `config/server_regions.yaml` 读取，并支持通过环境变量覆盖 SFTP 值。
 
-#### unified_blur_config.yaml 配置
+#### server_regions.yaml 配置
 
-`config/unified_blur_config.yaml` 文件用于配置统一检测器（UnifiedBlurrer），该检测器可以同时检测并模糊处理人脸和车牌。配置文件内容如下：
-
-```yaml
-# 统一模糊器的配置文件
-# 用于配置人脸和车牌的统一检测与模糊处理
-
-# YOLOv8 模型路径 (相对于项目根目录)
-model_path: 'models/best.pt'
-
-# 目标检测的置信度阈值
-# 范围: 0.0 - 1.0
-# 值越小，检测到的目标越多（可能包含更多误检）
-# 值越大，只检测高置信度的目标（可能漏检）
-detection_conf_thresh: 0.1
-
-# 高斯模糊的半径 (必须是奇数)
-# 建议值: 11, 15, 21, 31
-# 值越大，模糊效果越强，隐私保护越好
-# 值越小，模糊效果越弱，但可能保留更多细节
-blur_radius: 11
-
-# 是否使用GPU (如果可用)
-# True: 如果检测到GPU则使用GPU加速
-# False: 强制使用CPU（推荐，因为系统已针对CPU优化）
-gpu_avail: True
-```
-
-**配置参数说明**：
-
-1. **model_path**: 
-   - 统一检测模型的路径
-   - 该模型可以同时检测人脸和车牌
-   - 默认使用 `models/best.pt`
-
-2. **detection_conf_thresh**:
-   - 检测置信度阈值，范围 0.0-1.0
-   - 较低的值（如 0.1）会检测更多目标，但可能包含误检
-   - 较高的值（如 0.5）只检测高置信度目标，但可能漏检
-   - 建议值：0.1-0.3
-
-3. **blur_radius**:
-   - 高斯模糊的核半径，**必须是奇数**（如 11, 15, 21, 31）
-   - 值越大，模糊效果越强，隐私保护越好
-   - 值越小，模糊效果越弱，但可能保留更多细节
-   - 建议值：11-31
-
-4. **gpu_avail**:
-   - 是否使用GPU加速
-   - `True`: 如果检测到GPU则使用GPU
-   - `False`: 强制使用CPU（推荐，因为系统已针对CPU优化）
-
-**配置示例**：
+`config/server_regions.yaml` 文件用于配置 Europe / America / Asia 三个区域的服务器信息。示例：
 
 ```yaml
-# 高精度检测配置（减少误检）
-model_path: 'models/best.pt'
-detection_conf_thresh: 0.3
-blur_radius: 15
-gpu_avail: False
-
-# 高召回率配置（减少漏检）
-model_path: 'models/best.pt'
-detection_conf_thresh: 0.1
-blur_radius: 21
-gpu_avail: False
-
-# 强隐私保护配置（强模糊）
-model_path: 'models/best.pt'
-detection_conf_thresh: 0.2
-blur_radius: 31
-gpu_avail: False
+europe:
+  name: "欧洲服务器"
+  description: "符合GDPR规范，适合欧洲用户"
+  flag: "🇪🇺"
+  sftp:
+    host: "europe.example.com"
+    user: "username"
+    password: "password"
 ```
 
-**注意事项**：
-- 修改配置后需要重启应用才能生效
-- `blur_radius` 必须是奇数，如果设置为偶数，系统会自动加1
-- 建议在CPU环境下设置 `gpu_avail: False` 以获得最佳性能
+**覆盖优先级**：
+1. 环境变量（如 `EU_SFTP_HOST` / `EU_SFTP_USER` / `EU_SFTP_PASSWORD`）
+2. `config/server_regions.yaml`
+
+如果某区域的 `host/user/password` 不完整，系统会自动回退到本机 `/mnt/data` 存储模式。
 
 #### 文本模糊处理配置
 
@@ -300,33 +325,26 @@ ANONYMIZATION = {
 ```
 data_masking/
 ├── app.py                      # FastAPI主应用
-├── batch_process.py            # 命令行批量处理脚本
 ├── config.py                   # 系统配置文件
 ├── translations.py              # 多语言翻译字典（中英文）
 ├── requirements.txt             # Python依赖
 ├── README.md                    # 项目说明文档
 ├── config/
-│   └── unified_blur_config.yaml # 统一检测器配置（人脸+车牌）
+│   └── server_regions.yaml      # 三个区域的SFTP配置
 ├── src/
 │   ├── __init__.py
 │   ├── pipeline/               # 脱敏处理管道
 │   │   ├── __init__.py
 │   │   ├── unified_blurrer.py  # 统一检测器（人脸+车牌）
 │   │   └── texts.py            # 文本检测与模糊（DBNet）
-│   └── DBNet/                  # DBNet文本检测模型
-│       ├── main.py             # DBNet主程序
-│       ├── main.sh             # DBNet训练脚本
-│       ├── README.md           # DBNet说明文档
+│   └── DBNet/                  # DBNet文本检测运行时依赖
 │       ├── nets/                # 网络结构定义
 │       │   └── nn.py
-│       ├── utils/              # 工具函数
-│       │   ├── dataset.py
+│       ├── utils/              # 运行时工具函数
 │       │   └── util.py
 │       ├── weights/            # DBNet模型权重
-│       │   ├── best.pt         # DBNet最佳模型
-│       │   └── step.csv        # 训练记录
-│       └── demo/               # 示例文件
-│           └── demo.jpg
+│       │   └── best.pt         # DBNet最佳模型
+│       └── demo/               # 目录保留，可为空
 ├── models/                     # AI模型文件目录
 │   └── best.pt                 # 统一检测模型（人脸+车牌）
 ├── templates/                  # Web模板文件
@@ -334,13 +352,9 @@ data_masking/
 │   ├── index.html              # 主页面
 │   ├── privacy.html            # 隐私协议页面
 │   └── remote.html             # 远程访问页面
-├── static/                     # 静态资源文件
-│   └── placeholder
-├── data/                       # 示例数据目录
-│   ├── carpai.jpeg
-│   ├── jiepai.jpeg
-│   ├── jiepai2.jpeg
-│   └── person.jpeg
+├── static/                     # 静态资源目录（当前可为空）
+├── data/                       # 运行时样例数据目录
+│   └── carpai.jpeg
 ├── uploads/                    # 上传文件目录（按区域分类）
 ├── output/                     # 输出文件目录
 ├── temp/                       # 临时文件目录（处理会话临时文件）

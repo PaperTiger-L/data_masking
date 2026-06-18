@@ -3,27 +3,28 @@
 {% block title %}{{ t('remote_title') }} - {{ t('app_title') }}{% endblock %}
 
 {% block content %}
-<div id="remoteRoot" class="container py-4" data-authed="{{ 'true' if authed else 'false' }}">
-  <h1 class="mb-3">{{ t('remote_title') }}</h1>
+<div class="container py-4">
+  <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-3">
+    <h1 class="mb-0">{{ t('remote_title') }}</h1>
+    <div>
+      <label for="remoteLangSelect" class="form-label me-2 mb-0"><i class="fas fa-globe me-1"></i>{{ t('lang_label') }}</label>
+      <select id="remoteLangSelect" class="form-select form-select-sm d-inline-block w-auto">
+        <option value="zh" {{ 'selected' if lang == 'zh' else '' }}>{{ t('lang_option_zh') }}</option>
+        <option value="en" {{ 'selected' if lang == 'en' else '' }}>{{ t('lang_option_en') }}</option>
+      </select>
+    </div>
+  </div>
 
   {% if not authed %}
   <div class="row justify-content-center">
-    <div class="col-md-6">
+    <div class="col-md-5">
       <div class="card shadow-sm">
         <div class="card-body">
           <h5 class="card-title mb-3">{{ t('remote_login') }}</h5>
           {% if login_error %}
           <div class="alert alert-danger" role="alert">{{ login_error }}</div>
           {% endif %}
-          <form method="post" action="/remote/login">
-            <div class="mb-3">
-              <label for="host" class="form-label">{{ t('remote_ip') }}</label>
-              <input type="text" class="form-control" id="host" name="host" required placeholder="e.g., 192.168.1.100">
-            </div>
-            <div class="mb-3">
-              <label for="username" class="form-label">{{ t('remote_username') }}</label>
-              <input type="text" class="form-control" id="username" name="username" required>
-            </div>
+          <form method="post" action="/remote/login?lang={{ lang }}">
             <div class="mb-3">
               <label for="password" class="form-label">{{ t('remote_password') }}</label>
               <input type="password" class="form-control" id="password" name="password" required>
@@ -35,36 +36,75 @@
     </div>
   </div>
   {% else %}
-  <div class="card remote-card">
-    <div class="card-body">
-      <div class="d-flex flex-wrap justify-content-between align-items-end gap-2 mb-3">
+  <div class="d-flex justify-content-between align-items-center mb-3 gap-3 flex-wrap">
+    <form method="post" action="/remote/settings/anonymization?lang={{ lang }}" class="d-flex align-items-center gap-2">
+      <input type="hidden" name="region" value="{{ selected_region }}">
+      <label class="form-label mb-0">{{ t('admin_toggle_label') }}</label>
+      <select class="form-select" name="enabled" style="width:auto;">
+        <option value="true" {{ 'selected' if anonymization_enabled else '' }}>{{ t('admin_toggle_on') }}</option>
+        <option value="false" {{ 'selected' if not anonymization_enabled else '' }}>{{ t('admin_toggle_off') }}</option>
+      </select>
+      <button class="btn btn-primary btn-sm" type="submit">{{ t('admin_save') }}</button>
+    </form>
+    <form method="post" action="/remote/logout?lang={{ lang }}">
+      <button class="btn btn-outline-secondary btn-sm">{{ t('remote_logout') }}</button>
+    </form>
+  </div>
 
-        <div class="folder-toolbar d-flex">
-          <button id="refreshBtn" class="btn btn-outline-primary btn-sm">{{ t('remote_refresh') }}</button>
-          <button id="downloadBtn" class="btn btn-success btn-sm">{{ t('remote_download') }}</button>
-          <form method="post" action="/remote/logout" class="d-inline ms-2">
-            <button class="btn btn-outline-secondary btn-sm">{{ t('remote_logout') }}</button>
-          </form>
+  <div class="row g-4">
+    <div class="col-lg-6">
+      <div class="card shadow-sm">
+        <div class="card-body">
+          <h5>{{ t('admin_local_outputs') }}</h5>
+          {% if local_files %}
+          <ul class="list-group">
+            {% for item in local_files %}
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+              <span>{{ item.name }}</span>
+              <a class="btn btn-success btn-sm" href="/remote/local/download?lang={{ lang }}&name={{ item.name|urlencode }}">{{ t('remote_download') }}</a>
+            </li>
+            {% endfor %}
+          </ul>
+          {% else %}
+          <div class="text-muted">{{ t('admin_no_files') }}</div>
+          {% endif %}
         </div>
       </div>
+    </div>
 
-      <div class="row g-3">
-        <div class="col-md-3">
-          <label class="form-label mb-2">{{ t('remote_select_folder') }}</label>
-          <div id="folderList" class="list-group list-fixed"></div>
-          <div id="listStatus" class="text-muted small mt-2"></div>
-        </div>
-        <div class="col-md-4">
-          <label class="form-label mb-2">Files</label>
-          <div id="fileList" class="list-group list-fixed"></div>
-          <div id="fileStatus" class="text-muted small mt-2"></div>
-        </div>
-        <div class="col-md-5">
-          <label class="form-label mb-2">Preview</label>
-          <div id="previewArea2" class="border rounded p-2 bg-light text-center preview-area">
-            <img id="previewImg2" alt="preview2" class="img-fluid d-none" />
-            <div id="previewHint2" class="text-muted small">Select an image to preview</div>
+    <div class="col-lg-6">
+      <div class="card shadow-sm">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <div>
+              <h5 class="mb-1">{{ t('admin_remote_outputs') }}</h5>
+              <label class="form-label small text-muted mb-0">{{ t('remote_select_region') }}</label>
+            </div>
+            <form method="get" action="/remote" class="d-flex gap-2 align-items-center">
+              <input type="hidden" name="lang" value="{{ lang }}">
+              <select class="form-select form-select-sm" name="region" style="width:auto;">
+                {% for region in regions %}
+                <option value="{{ region.key }}" {{ 'selected' if region.key == selected_region else '' }}>{{ region.label }}</option>
+                {% endfor %}
+              </select>
+              <button class="btn btn-outline-primary btn-sm" type="submit">{{ t('remote_refresh') }}</button>
+            </form>
           </div>
+          {% if remote_error %}
+          <div class="alert alert-warning">{{ remote_error }}</div>
+          {% endif %}
+          {% if remote_files %}
+          <ul class="list-group">
+            {% for item in remote_files %}
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+              <span>{{ item.name }}</span>
+              <a class="btn btn-success btn-sm" href="/remote/remote/download?lang={{ lang }}&region={{ selected_region|urlencode }}&name={{ item.name|urlencode }}">{{ t('remote_download') }}</a>
+            </li>
+            {% endfor %}
+          </ul>
+          {% else %}
+          <div class="text-muted">{{ t('admin_no_files') }}</div>
+          {% endif %}
         </div>
       </div>
     </div>
@@ -75,145 +115,11 @@
 
 {% block extra_js %}
 <script>
-(function(){
-  const root = document.getElementById('remoteRoot');
-  const authed = root && root.dataset.authed === 'true';
-  if (!authed) return;
-  const folderListEl = document.getElementById('folderList');
-  const fileListEl = document.getElementById('fileList');
-  const refreshBtn = document.getElementById('refreshBtn');
-  const downloadBtn = document.getElementById('downloadBtn');
-  const statusEl = document.getElementById('listStatus');
-  const fileStatusEl = document.getElementById('fileStatus');
-  const previewImg2 = document.getElementById('previewImg2');
-  const previewHint2 = document.getElementById('previewHint2');
-  let selectedFolder = '';
-
-  async function loadFolders(){
-    statusEl.textContent = '...';
-    selectedFolder = '';
-    folderListEl.innerHTML = '';
-    fileListEl.innerHTML = '';
-    fileStatusEl.textContent = '';
-    try {
-      const resp = await fetch(`/remote/list`);
-      if (!resp.ok) throw new Error('Failed');
-      const data = await resp.json();
-      const folders = Array.isArray(data.folders) ? data.folders : [];
-      folders.forEach(name => {
-        const a = document.createElement('a');
-        a.href = '#';
-        a.className = 'list-group-item list-group-item-action';
-        a.textContent = name;
-        a.addEventListener('click', (e)=>{
-          e.preventDefault();
-          [...folderListEl.querySelectorAll('.list-group-item')].forEach(item=> item.classList.remove('active'));
-          a.classList.add('active');
-          selectedFolder = name;
-          loadFiles();
-        });
-        folderListEl.appendChild(a);
-      });
-      statusEl.textContent = `${folders.length} folders`;
-      if (folders.length > 0) {
-        const first = folderListEl.querySelector('.list-group-item');
-        if (first) {
-          first.classList.add('active');
-          selectedFolder = first.textContent;
-          await loadFiles();
-        }
-      }
-    } catch(e){
-      statusEl.textContent = 'Error loading folders';
-    }
-  }
-
-  async function loadFiles(){
-    const folder = selectedFolder;
-    if (!folder){
-      fileListEl.innerHTML = '';
-      fileStatusEl.textContent = '';
-      clearPreview();
-      return;
-    }
-    fileStatusEl.textContent = '...';
-    fileListEl.innerHTML = '';
-    clearPreview();
-    try {
-      const resp = await fetch(`/remote/files?folder=${encodeURIComponent(folder)}`);
-      if (!resp.ok) throw new Error('Failed');
-      const data = await resp.json();
-      const files = Array.isArray(data.files) ? data.files : [];
-      files.forEach(f => {
-        const a = document.createElement('a');
-        a.href = '#';
-        a.className = 'list-group-item list-group-item-action';
-        const size = (typeof f.size === 'number') ? ` (${f.size} B)` : '';
-        a.textContent = `${f.name}${size}`;
-        a.addEventListener('click', (e)=>{
-          e.preventDefault();
-          [...fileListEl.querySelectorAll('.list-group-item')].forEach(item=> item.classList.remove('active'));
-          a.classList.add('active');
-          showPreview(f.name);
-        });
-        fileListEl.appendChild(a);
-      });
-      fileStatusEl.textContent = `${files.length} files`;
-      const firstImg = files.find(f => isImageName(f.name));
-      if (firstImg) {
-        const toActivate = [...fileListEl.querySelectorAll('.list-group-item')].find(el => el.textContent.startsWith(firstImg.name));
-        if (toActivate) toActivate.classList.add('active');
-        showPreview(firstImg.name);
-      } else {
-        clearPreview();
-      }
-    } catch(e){
-      fileStatusEl.textContent = 'Error loading files';
-    }
-  }
-
-  function isImageName(name){
-    return /\.(png|jpe?g|bmp|gif|webp|tiff?)$/i.test(name);
-  }
-
-  function clearPreview(){
-    previewImg2.src = '';
-    previewImg2.classList.add('d-none');
-    previewHint2.textContent = 'Select an image to preview';
-  }
-
-  function showPreview(fileName){
-    if (!isImageName(fileName)){
-      clearPreview();
-      previewHint2.textContent = 'Not an image file';
-      return;
-    }
-    const url = `/remote/file?folder=${encodeURIComponent(selectedFolder)}&name=${encodeURIComponent(fileName)}`;
-    previewImg2.src = url;
-    previewImg2.classList.remove('d-none');
-    previewHint2.textContent = fileName;
-  }
-
-  refreshBtn.addEventListener('click', (e)=>{ e.preventDefault(); loadFolders(); });
-  downloadBtn.addEventListener('click', (e)=>{
-    e.preventDefault();
-    if (!selectedFolder) return;
-    window.location.href = `/remote/download?folder=${encodeURIComponent(selectedFolder)}`;
-  });
-
-  // initial load
-  loadFolders();
-})();
+document.getElementById('remoteLangSelect')?.addEventListener('change', function() {
+  const lang = this.value;
+  const currentUrl = new URL(window.location.href);
+  currentUrl.searchParams.set('lang', lang);
+  window.location.href = currentUrl.toString();
+});
 </script>
-{% endblock %}
-
-{% block extra_css %}
-<style>
-  .remote-card { box-shadow: 0 2px 10px rgba(0,0,0,0.05); border: 1px solid #eee; }
-  .list-fixed { max-height: 420px; overflow: auto; }
-  .list-group-item.active { background-color: #0d6efd; border-color: #0d6efd; }
-  @media (max-width: 576px){
-    .folder-toolbar { width: 100%; justify-content: flex-start; }
-  }
-</style>
 {% endblock %}

@@ -1,0 +1,30 @@
+admin:
+  password: "22"
+  anonymization_enabled: true
+
+europe:
+  name: "欧洲服务器"
+  description: "符合GDPR规范，适合欧洲用户"
+  flag: "🇪🇺"
+  sftp:
+    host: ""
+    user: ""
+    password: ""
+
+america:
+  name: "美国服务器"
+  description: "高速稳定，适合美洲用户"
+  flag: "🇺🇸"
+  sftp:
+    host: ""
+    user: ""
+    password: ""
+
+asia:
+  name: "亚洲服务器"
+  description: "低延迟访问，适合亚太用户"
+  flag: "🌏"
+  sftp:
+    host: ""
+    user: ""
+    password: ""

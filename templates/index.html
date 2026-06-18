@@ -62,7 +62,7 @@
     </div>
 
     <!-- 主要内容 -->
-    <div id="mainContent" style="display: none;">
+    <div id="mainContent">
         <div class="row">
             <div class="col-lg-8 mx-auto">
                 <div class="text-center mb-5 d-flex justify-content-between align-items-start flex-wrap">
@@ -76,8 +76,8 @@
                     <div class="ms-auto">
                         <label for="langSelect" class="form-label me-2 mb-0"><i class="fas fa-globe me-1"></i>{{ t('lang_label') }}</label>
                         <select id="langSelect" class="form-select form-select-sm d-inline-block w-auto">
-                            <option value="zh" {{ 'selected' if lang == 'zh' else '' }}>中文</option>
-                            <option value="en" {{ 'selected' if lang == 'en' else '' }}>English</option>
+                            <option value="zh" {{ 'selected' if lang == 'zh' else '' }}>{{ t('lang_option_zh') }}</option>
+                            <option value="en" {{ 'selected' if lang == 'en' else '' }}>{{ t('lang_option_en') }}</option>
                         </select>
                     </div>
                 </div>
@@ -192,9 +192,10 @@
                         <i class="fas fa-cloud-upload-alt fa-3x text-muted mb-3"></i>
                         <h4>{{ t('upload_drop_hint') }}</h4>
                         <p class="text-muted">{{ t('upload_types_hint') }}</p>
-                        <input type="file" id="fileInput" multiple accept="image/*" style="display: none;">
+                        <input type="file" id="fileInput" multiple accept="image/*,.zip,.tar,.tar.gz,.tgz,.tar.bz2,.tbz2,.tar.xz,.txz" class="visually-hidden">
+                        <input type="file" id="folderInput" webkitdirectory directory multiple class="visually-hidden">
                         <button type="button" class="btn btn-outline-primary" id="selectFileBtn">
-                            <i class="fas fa-folder-open me-2"></i>{{ t('select_files_btn') }}
+                            <i class="fas fa-folder-open me-2"></i><span id="selectFileBtnText">{{ t('select_files_btn') }}</span>
                         </button>
                     </div>
 
@@ -214,6 +215,7 @@
                                                 <i class="fas fa-hdd me-1"></i>
                                                 {{ t('total_size') }}: <span id="totalSize">0 B</span>
                                             </span>
+                                            <span class="text-muted" id="selectionModeInfo"></span>
                                         </div>
                                     </div>
                                     <span id="fileCountBadge" class="badge bg-primary fs-6"></span>
@@ -300,21 +302,12 @@
 
 {% block extra_js %}
 <script>
-document.addEventListener('DOMContentLoaded', function() {
+    const currentLang = "{{ lang }}";
+
     // 本地化消息
     const MSG_PLEASE_SELECT = "{{ t('please_select_files') }}";
-    const MSG_MORE_NOT_SHOWN = "{{ t('more_not_shown') }}"; // contains {n}
-    const MSG_UPLOADED_PROCESSING = "{{ t('uploaded_processing') }}";
-    const MSG_COMPLETED = "{{ t('completed') }}";
     const MSG_PROCESSING_FAILED = "{{ t('processing_failed') }}";
     const MSG_START = "{{ t('start_btn') }}";
-    const MSG_PROCESSING_PERCENT = "{{ t('processing_percent') }}"; // contains {p}
-    const MSG_PROCESSED_COUNT = "{{ t('processed_count') }}"; // contains {n}
-    const MSG_SFTP_PROMPT = "{{ t('sftp_prompt') }}";
-    const MSG_SFTP_CONNECTING = "{{ t('sftp_connecting') }}";
-    const MSG_SFTP_CONN_FAIL = "{{ t('sftp_conn_fail') }}";
-    const MSG_SFTP_REQ_FAIL = "{{ t('sftp_req_fail') }}";
-    const MSG_UPLOAD_SUCCESS_PROCESSING = "{{ t('upload_success_processing') }}";
     const MSG_TASK_QUEUED = "{{ t('task_status_queued') }}";
     const MSG_TASK_PROCESSING = "{{ t('task_status_processing') }}";
     const MSG_TASK_COMPLETED = "{{ t('task_status_completed') }}";
@@ -322,15 +315,35 @@ document.addEventListener('DOMContentLoaded', function() {
     const MSG_SFTP_DISCONNECT = "{{ t('sftp_disconnect') }}";
     const MSG_SFTP_TEST = "{{ t('sftp_test') }}";
     const MSG_UPLOAD_SUCCESS = "{{ t('upload_success') }}";
-    const MSG_SELECTED_FILES = "{{ t('selected_files') }}";
-    const MSG_FILE_COUNT = "{{ t('file_count') }}";
-    const MSG_TOTAL_SIZE = "{{ t('total_size') }}";
-    const MSG_FILES_UNIT = "{{ t('files_unit') }}";
+    const MSG_STATUS_OK = "{{ t('status_ok') }}";
+    const MSG_STATUS_NO_RELATIVE_PATHS = "{{ t('status_no_relative_paths') }}";
     const MSG_NO_FILES_SELECTED = "{{ t('no_files_selected') }}";
     const MSG_CURRENT_SELECTED = "{{ t('current_selected') }}";
     const MSG_SERVER_EUROPE = "{{ t('server_europe') }}";
     const MSG_SERVER_AMERICA = "{{ t('server_america') }}";
     const MSG_SERVER_ASIA = "{{ t('server_asia') }}";
+    const MSG_UPLOAD_PREPARING = "{{ t('upload_preparing') }}";
+    const MSG_UPLOADING_PROGRESS = "{{ t('uploading_progress') }}";
+    const MSG_UPLOAD_FAILED = "{{ t('upload_failed') }}";
+    const MSG_NETWORK_ERROR = "{{ t('network_error') }}";
+    const MSG_POLL_FAILED = "{{ t('poll_failed') }}";
+    const MSG_TASK_EXTRACTING_PROGRESS = "{{ t('task_extracting_progress') }}";
+    const MSG_TASK_SAVING_PROGRESS = "{{ t('task_saving_progress') }}";
+    const MSG_TASK_PROCESSING_IMAGES_PROGRESS = "{{ t('task_processing_images_progress') }}";
+    const MSG_TASK_PROGRESS_PERCENT_SUFFIX = "{{ t('task_progress_percent_suffix') }}";
+    const MSG_TASK_SUMMARY_SKIPPED_CORRUPT = "{{ t('task_summary_skipped_corrupt') }}";
+    const MSG_TASK_COMPLETED_SUMMARY = "{{ t('task_completed_summary') }}";
+    const MSG_TASK_SUMMARY_SKIPPED = "{{ t('task_summary_skipped') }}";
+    const MSG_TASK_SUMMARY_PRESERVED = "{{ t('task_summary_preserved') }}";
+    const MSG_TASK_SUMMARY_CORRUPT = "{{ t('task_summary_corrupt') }}";
+    const MSG_TASK_SUMMARY_EMPTY = "{{ t('task_summary_empty') }}";
+    const MSG_TASK_COMPLETED_LOCAL_PATH = "{{ t('task_completed_local_path') }}";
+    const MSG_TASK_COMPLETED_CLOSING = "{{ t('task_completed_closing') }}";
+    const MSG_PICK_MODE_FILE = "{{ t('pick_file') }}";
+    const MSG_PICK_MODE_FOLDER = "{{ t('pick_folder') }}";
+    const MSG_SELECT_FILES_BTN = "{{ t('select_files_btn') }}";
+    const MSG_SELECT_FOLDER_BTN = "{{ t('select_folder_btn') }}";
+    const MSG_FILES_UNIT = "{{ t('files_unit') }}";
     // 语言切换
     const langSelect = document.getElementById('langSelect');
     if (langSelect) {
@@ -341,14 +354,16 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     // 显示隐私协议
-    const privacyModal = new bootstrap.Modal(document.getElementById('privacyModal'));
-    privacyModal.show();
+    const privacyModalElement = document.getElementById('privacyModal');
+    if (privacyModalElement && window.bootstrap?.Modal) {
+        const privacyModal = new bootstrap.Modal(privacyModalElement);
+        privacyModal.show();
 
-    // 同意隐私协议
-    document.getElementById('acceptPrivacy').addEventListener('click', function() {
-        privacyModal.hide();
-        document.getElementById('mainContent').style.display = 'block';
-    });
+        // 同意隐私协议
+        document.getElementById('acceptPrivacy')?.addEventListener('click', function() {
+            privacyModal.hide();
+        });
+    }
 
     // 更新当前选择的服务器信息
     function updateServerInfo() {
@@ -376,24 +391,29 @@ document.addEventListener('DOMContentLoaded', function() {
     // 文件上传相关
     const uploadArea = document.getElementById('uploadArea');
     const fileInput = document.getElementById('fileInput');
+    const folderInput = document.getElementById('folderInput');
+    const selectFileBtn = document.getElementById('selectFileBtn');
+    const selectFileBtnText = document.getElementById('selectFileBtnText');
     const modeFile = document.getElementById('modeFile');
     const modeFolder = document.getElementById('modeFolder');
 
+    function getActivePicker() {
+        return modeFolder && modeFolder.checked ? folderInput : fileInput;
+    }
+
+    function openActivePicker() {
+        const picker = getActivePicker();
+        picker.value = '';
+        picker.click();
+    }
+
     function applyPickMode() {
-        if (modeFolder && modeFolder.checked) {
-            // 启用选择文件夹（浏览器需支持 webkitdirectory）
-            fileInput.setAttribute('webkitdirectory', '');
-            fileInput.setAttribute('directory', '');
-            fileInput.setAttribute('multiple', '');
-            // 关键修复：移除文件类型限制，以允许选择文件夹
-            fileInput.removeAttribute('accept');
-        } else {
-            // 仅选择文件
-            fileInput.removeAttribute('webkitdirectory');
-            fileInput.removeAttribute('directory');
-            fileInput.setAttribute('multiple', '');
-            // 恢复文件类型限制
-            fileInput.setAttribute('accept', 'image/*');
+        fileInput.value = '';
+        folderInput.value = '';
+        if (selectFileBtnText) {
+            selectFileBtnText.textContent = modeFolder && modeFolder.checked
+                ? MSG_SELECT_FOLDER_BTN
+                : MSG_SELECT_FILES_BTN;
         }
     }
 
@@ -403,7 +423,6 @@ document.addEventListener('DOMContentLoaded', function() {
         // 初始化一次
         applyPickMode();
     }
-    const fileList = document.getElementById('fileList');
     const uploadBtn = document.getElementById('uploadBtn');
     const uploadForm = document.getElementById('uploadForm');
     const progressContainer = document.querySelector('.progress-container');
@@ -414,10 +433,12 @@ document.addEventListener('DOMContentLoaded', function() {
     // 脱敏选项控制
     const enableAnonymization = document.getElementById('enableAnonymization');
     const anonymizationOptions = document.getElementById('anonymizationOptions');
-    
-    enableAnonymization.addEventListener('change', function() {
-        anonymizationOptions.style.display = this.checked ? 'block' : 'none';
-    });
+
+    if (enableAnonymization && anonymizationOptions) {
+        enableAnonymization.addEventListener('change', function() {
+            anonymizationOptions.style.display = this.checked ? 'block' : 'none';
+        });
+    }
 
     // 拖拽上传
     uploadArea.addEventListener('dragover', function(e) {
@@ -448,16 +469,16 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     uploadArea.addEventListener('click', function(e) {
-        // 只有点击上传区域本身时才触发，避免按钮双重触发
-        if (e.target === uploadArea || uploadArea.contains(e.target) && !e.target.closest('#selectFileBtn')) {
-            fileInput.click();
+        if (e.target.closest('#selectFileBtn') || e.target.closest('#fileInput') || e.target.closest('#folderInput')) {
+            return;
         }
+        openActivePicker();
     });
 
-    // 单独处理按钮点击
-    document.getElementById('selectFileBtn').addEventListener('click', function(e) {
-        e.stopPropagation(); // 阻止事件冒泡
-        fileInput.click();
+    selectFileBtn.addEventListener('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        openActivePicker();
     });
 
     // 当前选择的文件集合（支持文件或文件夹拖拽/选择）
@@ -465,6 +486,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
     fileInput.addEventListener('change', function() {
         handleFiles(this.files);
+        this.value = '';
+    });
+
+    folderInput.addEventListener('change', function() {
+        handleFiles(this.files);
+        this.value = '';
     });
 
     function formatFileSize(bytes) {
@@ -565,7 +592,8 @@ document.addEventListener('DOMContentLoaded', function() {
         const fileCountBadge = document.getElementById('fileCountBadge');
         const totalSize = document.getElementById('totalSize');
         const filesUnit = document.getElementById('filesUnit');
-        
+        const selectionModeInfo = document.getElementById('selectionModeInfo');
+
         if (selectedFiles.length === 0) {
             filesArea.style.display = 'none';
             return;
@@ -573,23 +601,31 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // 显示文件统计区域
         filesArea.style.display = 'block';
-        
+
         // 计算总文件大小
         let totalBytes = 0;
         selectedFiles.forEach(file => {
             totalBytes += file.size;
         });
-        
+
         // 更新文件数量
         const count = selectedFiles.length;
         fileCount.textContent = count;
         fileCountBadge.textContent = count;
-        
+
         // 更新文件单位（支持语言切换）
         if (filesUnit) {
             filesUnit.textContent = MSG_FILES_UNIT;
         }
-        
+
+        if (selectionModeInfo) {
+            const folderMode = modeFolder && modeFolder.checked;
+            const hasRelativePaths = selectedFiles.some(file => file.webkitRelativePath && file.webkitRelativePath.includes('/'));
+            selectionModeInfo.textContent = folderMode
+                ? `${MSG_PICK_MODE_FOLDER}: ${hasRelativePaths ? MSG_STATUS_OK : MSG_STATUS_NO_RELATIVE_PATHS}`
+                : `${MSG_PICK_MODE_FILE}: ${MSG_STATUS_OK}`;
+        }
+
         // 更新总大小
         totalSize.textContent = formatFileSize(totalBytes);
     }
@@ -602,6 +638,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // 渲染任务队列
     function renderTaskQueue() {
+        if (!taskQueueArea || !taskQueueBody) {
+            return;
+        }
         if (taskQueue.length > 0) {
             taskQueueArea.style.display = 'block';
         }
@@ -613,25 +652,65 @@ document.addEventListener('DOMContentLoaded', function() {
 
             switch (task.status) {
                 case 'uploading':
-                    statusText = `上传中: ${task.progress}%`;
+                    statusText = MSG_UPLOADING_PROGRESS.replace('{p}', task.progress || 0);
                     statusClass = 'text-primary';
                     break;
                 case 'queued':
                     statusText = MSG_TASK_QUEUED;
                     statusClass = 'text-secondary';
                     break;
-                case 'processing':
-                    statusText = MSG_TASK_PROCESSING;
+                case 'processing': {
+                    const progress = task.serverProgress || {};
+                    const summary = task.summary || {};
+                    if (task.phase === 'extracting') {
+                        statusText = MSG_TASK_EXTRACTING_PROGRESS
+                            .replace('{done}', progress.archives_processed || 0)
+                            .replace('{total}', progress.archives_detected || 0);
+                    } else if (task.phase === 'uploading') {
+                        statusText = MSG_TASK_SAVING_PROGRESS
+                            .replace('{done}', progress.uploaded_outputs || 0)
+                            .replace('{total}', progress.processable_images || 0);
+                    } else {
+                        statusText = MSG_TASK_PROCESSING_IMAGES_PROGRESS
+                            .replace('{done}', progress.processed_images || 0)
+                            .replace('{total}', progress.processable_images || 0);
+                    }
+                    if (progress.percent !== undefined) {
+                        statusText += MSG_TASK_PROGRESS_PERCENT_SUFFIX.replace('{p}', progress.percent);
+                    }
+                    if (summary.non_images_skipped || summary.non_images_preserved || summary.corrupt_archives) {
+                        statusText += MSG_TASK_SUMMARY_SKIPPED_CORRUPT
+                            .replace('{skipped}', summary.non_images_skipped || 0)
+                            .replace('{preserved}', summary.non_images_preserved || 0)
+                            .replace('{corrupt}', summary.corrupt_archives || 0);
+                    }
                     statusClass = 'text-info';
                     break;
-                case 'completed':
+                }
+                case 'completed': {
+                    const summary = task.summary || {};
+                    statusText = MSG_TASK_COMPLETED_SUMMARY
+                        .replace('{status}', MSG_TASK_COMPLETED)
+                        .replace('{n}', task.processedFiles || 0);
+                    if (summary.non_images_skipped) {
+                        statusText += MSG_TASK_SUMMARY_SKIPPED.replace('{n}', summary.non_images_skipped);
+                    }
+                    if (summary.non_images_preserved) {
+                        statusText += MSG_TASK_SUMMARY_PRESERVED.replace('{n}', summary.non_images_preserved);
+                    }
+                    if (summary.corrupt_archives) {
+                        statusText += MSG_TASK_SUMMARY_CORRUPT.replace('{n}', summary.corrupt_archives);
+                    }
+                    if (summary.empty_archives) {
+                        statusText += MSG_TASK_SUMMARY_EMPTY.replace('{n}', summary.empty_archives);
+                    }
+                    statusText += MSG_TASK_COMPLETED_CLOSING;
                     if (task.storageMode === 'local' && task.outputPath) {
-                        statusText = `${MSG_TASK_COMPLETED}（已保存到本机: ${task.outputPath}）`;
-                    } else {
-                        statusText = MSG_TASK_COMPLETED;
+                        statusText += MSG_TASK_COMPLETED_LOCAL_PATH.replace('{path}', task.outputPath);
                     }
                     statusClass = 'text-success';
                     break;
+                }
                 case 'error':
                     statusText = task.error || MSG_TASK_ERROR;
                     statusClass = 'text-danger';
@@ -650,11 +729,15 @@ document.addEventListener('DOMContentLoaded', function() {
             if (task.status === 'queued' || task.status === 'processing') {
                 hasActiveTasks = true;
                 try {
-                    const response = await fetch(`/api/status/${task.id}`);
+                    const response = await fetch(`/api/status/${task.id}?lang=${encodeURIComponent(currentLang)}`);
                     const data = await response.json();
                     task.status = data.status; // 'processing', 'completed', or 'error'
+                    task.phase = data.phase || null;
                     task.storageMode = data.storage_mode || null;
                     task.outputPath = data.output_path || null;
+                    task.serverProgress = data.progress || null;
+                    task.summary = data.summary || null;
+                    task.processedFiles = data.processed_files || 0;
                     if(data.status === 'error') {
                         task.error = data.error;
                     } else if(data.status === 'completed') {
@@ -662,7 +745,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                 } catch (e) {
                     task.status = 'error';
-                    task.error = '轮询失败';
+                    task.error = MSG_POLL_FAILED;
                 }
             } else if (task.status === 'completed') {
                 hasCompletedTasks = true;
@@ -705,7 +788,7 @@ document.addEventListener('DOMContentLoaded', function() {
         // 恢复主进度条显示
         progressContainer.style.display = 'block';
         progressBar.style.width = '0%';
-        progressText.textContent = '准备上传...';
+        progressText.textContent = MSG_UPLOAD_PREPARING;
         setUploadButtonState('uploading');
 
         const formData = new FormData();
@@ -719,7 +802,7 @@ document.addEventListener('DOMContentLoaded', function() {
         // SFTP凭据由后端根据server_region自动获取，无需前端传递
 
         const xhr = new XMLHttpRequest();
-        xhr.open('POST', '/api/upload', true);
+        xhr.open('POST', `/api/upload?lang=${encodeURIComponent(currentLang)}`, true);
 
         xhr.upload.onprogress = function(e) {
             if (e.lengthComputable) {
@@ -729,7 +812,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
                 // 同步更新主进度条
                 progressBar.style.width = percentComplete + '%';
-                progressText.textContent = `上传中: ${percentComplete}%`;
+                progressText.textContent = MSG_UPLOADING_PROGRESS.replace('{p}', percentComplete);
             }
         };
 
@@ -744,7 +827,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 setUploadButtonState('success');
             } else {
                 task.status = 'error';
-                task.error = '上传失败';
+                task.error = MSG_UPLOAD_FAILED;
                 renderTaskQueue();
                 setUploadButtonState('error');
             }
@@ -752,7 +835,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
         xhr.onerror = function() {
             task.status = 'error';
-            task.error = '网络错误';
+            task.error = MSG_NETWORK_ERROR;
             renderTaskQueue();
             setUploadButtonState('error');
         };
@@ -765,6 +848,5 @@ document.addEventListener('DOMContentLoaded', function() {
         // 隐藏文件列表区域
         document.getElementById('selectedFilesArea').style.display = 'none';
     });
-});
 </script>
 {% endblock %}

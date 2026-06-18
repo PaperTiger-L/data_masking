@@ -5,47 +5,32 @@
 import os
 from pathlib import Path
 
+import yaml
+
 # 基础路径
 BASE_DIR = Path(__file__).parent
-MODELS_DIR = BASE_DIR / "models"
 UPLOAD_DIR = BASE_DIR / "uploads"
 OUTPUT_DIR = BASE_DIR / "output"
 TEMP_DIR = BASE_DIR / "temp"
 LOGS_DIR = BASE_DIR / "logs"
-
-# 服务器配置
-SERVER_HOST = os.getenv("SERVER_HOST", "0.0.0.0")
-SERVER_PORT = int(os.getenv("SERVER_PORT", 8000))
-DEBUG_MODE = os.getenv("DEBUG", "false").lower() == "true"
+STAGING_ROOT = Path(os.getenv("STAGING_ROOT", str(BASE_DIR / "staging")))
+SQLITE_DB_PATH = Path(os.getenv("SQLITE_DB_PATH", str(BASE_DIR / "data_masking.db")))
+STAGING_RETENTION_HOURS = int(os.getenv("STAGING_RETENTION_HOURS", 72))
+RUNNER_POLL_INTERVAL_SECONDS = int(os.getenv("RUNNER_POLL_INTERVAL_SECONDS", 5))
+JOB_LEASE_SECONDS = int(os.getenv("JOB_LEASE_SECONDS", 120))
+JOB_RECOVERY_GRACE_SECONDS = int(os.getenv("JOB_RECOVERY_GRACE_SECONDS", 300))
 
 # 文件上传限制
-MAX_FILE_SIZE = int(os.getenv("MAX_FILE_SIZE", 100 * 1024 * 1024))  # 100MB
+MAX_FILE_SIZE = int(os.getenv("MAX_FILE_SIZE", 8 * 1024 * 1024 * 1024))  # 8GB，单文件/单压缩包上限
 ALLOWED_EXTENSIONS = {'.jpg', '.jpeg', '.png', '.bmp', '.tiff', '.tif'}
-MAX_FILES_PER_REQUEST = int(os.getenv("MAX_FILES_PER_REQUEST", 50))
+ALLOWED_ARCHIVE_EXTENSIONS = {'.zip', '.tar', '.tar.gz', '.tgz', '.tar.bz2', '.tbz2', '.tar.xz', '.txz'}
+MAX_FILES_PER_REQUEST = int(os.getenv("MAX_FILES_PER_REQUEST", 30000))
+MAX_ARCHIVE_TOTAL_UNCOMPRESSED_SIZE = int(os.getenv("MAX_ARCHIVE_TOTAL_UNCOMPRESSED_SIZE", 20 * 1024 * 1024 * 1024))  # 20GB
+MAX_EXTRACTED_FILES_PER_ARCHIVE = int(os.getenv("MAX_EXTRACTED_FILES_PER_ARCHIVE", 50000))
+MAX_PROCESSABLE_IMAGES_PER_REQUEST = int(os.getenv("MAX_PROCESSABLE_IMAGES_PER_REQUEST", 30000))
 
 # 处理配置
-MAX_IMAGE_SIZE = int(os.getenv("MAX_IMAGE_SIZE", 1920))  # 最大图像尺寸
-PROCESSING_TIMEOUT = int(os.getenv("PROCESSING_TIMEOUT", 300))  # 5分钟超时
-CLEANUP_INTERVAL = int(os.getenv("CLEANUP_INTERVAL", 3600))  # 1小时清理一次
-
-# 模型配置
-MODEL_CONFIG = {
-    "face": {
-        "backend": os.getenv("FACE_BACKEND", "yolov8_face"),
-        "weights_path": MODELS_DIR / "yolov8n-face.pt",
-        "fallback_weights": MODELS_DIR / "retinaface_resnet50.pth"
-    },
-    "plate": {
-        "backend": os.getenv("PLATE_BACKEND", "yolov8_plate"),
-        "weights_path": MODELS_DIR / "license_plate_detector.pt",
-        "cascade_path": MODELS_DIR / "haarcascade_russian_plate_number.xml"
-    },
-    "text": {
-        "dbnet_root": Path(os.getenv("DBNET_ROOT", str(BASE_DIR.parent / "DBNet"))),
-        "weights_path": Path(os.getenv("TEXT_WEIGHTS", str(BASE_DIR.parent / "DBNet" / "weights" / "best.pt"))),
-        "input_size": int(os.getenv("TEXT_INPUT_SIZE", 960))
-    }
-}
+PROCESSING_TIMEOUT = int(os.getenv("PROCESSING_TIMEOUT", 24 * 60 * 60))  # 24小时超时
 
 # 日志配置
 LOG_CONFIG = {
@@ -56,14 +41,6 @@ LOG_CONFIG = {
     "format": "{time:YYYY-MM-DD HH:mm:ss} | {level} | {name}:{function}:{line} | {message}"
 }
 
-# 安全配置
-SECURITY_CONFIG = {
-    "session_timeout": int(os.getenv("SESSION_TIMEOUT", 3600)),  # 1小时
-    "rate_limit": int(os.getenv("RATE_LIMIT", 10)),  # 每分钟10次请求
-    "cors_origins": os.getenv("CORS_ORIGINS", "*").split(","),
-    "trusted_hosts": os.getenv("TRUSTED_HOSTS", "localhost,127.0.0.1").split(",")
-}
-
 # 脱敏参数（统一从配置读取，可被环境变量覆盖）
 ANONYMIZATION = {
     # 文本区域膨胀与额外padding
@@ -72,105 +49,55 @@ ANONYMIZATION = {
     "text_use_padded_rect": os.getenv("TEXT_USE_PADDED_RECT", "false").lower() in ("1", "true", "yes"),
 }
 
-# 并行处理设置
-PARALLEL = {
-    "enable_parallel": os.getenv("ENABLE_PARALLEL", "false").lower() in ("1", "true", "yes"),
-    # 默认固定为4，可通过环境变量 MAX_WORKERS 覆盖
-    "max_workers": int(os.getenv("MAX_WORKERS", "4")),
+SERVER_REGIONS_CONFIG_PATH = BASE_DIR / "config" / "server_regions.yaml"
+
+
+def _load_server_regions_config():
+    with open(SERVER_REGIONS_CONFIG_PATH, "r", encoding="utf-8") as f:
+        return yaml.safe_load(f) or {}
+
+
+def _load_server_regions(config_data: dict):
+    regions = {
+        key: value for key, value in config_data.items()
+        if key in {"europe", "america", "asia"}
+    }
+
+    env_overrides = {
+        "europe": {
+            "host": os.getenv("EU_SFTP_HOST", "").strip(),
+            "user": os.getenv("EU_SFTP_USER", "").strip(),
+            "password": os.getenv("EU_SFTP_PASSWORD", "").strip(),
+        },
+        "america": {
+            "host": os.getenv("US_SFTP_HOST", "").strip(),
+            "user": os.getenv("US_SFTP_USER", "").strip(),
+            "password": os.getenv("US_SFTP_PASSWORD", "").strip(),
+        },
+        "asia": {
+            "host": os.getenv("AS_SFTP_HOST", "").strip(),
+            "user": os.getenv("AS_SFTP_USER", "").strip(),
+            "password": os.getenv("AS_SFTP_PASSWORD", "").strip(),
+        },
+    }
+
+    for region_name, overrides in env_overrides.items():
+        region_config = regions.setdefault(region_name, {})
+        sftp_config = region_config.setdefault("sftp", {})
+        for key, value in overrides.items():
+            if value:
+                sftp_config[key] = value
+            else:
+                sftp_config[key] = str(sftp_config.get(key, "")).strip()
+
+    return regions
+
+
+_SERVER_REGIONS_CONFIG = _load_server_regions_config()
+ADMIN_CONFIG = {
+    "password": str(_SERVER_REGIONS_CONFIG.get("admin", {}).get("password", "")).strip(),
+    "anonymization_enabled": bool(_SERVER_REGIONS_CONFIG.get("admin", {}).get("anonymization_enabled", True)),
 }
 
 # 服务器区域配置
-SERVER_REGIONS = {
-    "europe": {
-        "name": "欧洲服务器",
-        "description": "符合GDPR规范，适合欧洲用户",
-        "flag": "🇪🇺",
-        "sftp": {
-            "host": os.getenv("EU_SFTP_HOST", "").strip(),
-            "user": os.getenv("EU_SFTP_USER", "").strip(),
-            "password": os.getenv("EU_SFTP_PASSWORD", "").strip()
-        }
-    },
-    "america": {
-        "name": "美国服务器",
-        "description": "高速稳定，适合美洲用户",
-        "flag": "🇺🇸",
-        "sftp": {
-            "host": os.getenv("US_SFTP_HOST", "").strip(),
-            "user": os.getenv("US_SFTP_USER", "").strip(),
-            "password": os.getenv("US_SFTP_PASSWORD", "").strip()
-        }
-    },
-    "asia": {
-        "name": "亚洲服务器",
-        "description": "低延迟访问，适合亚太用户",
-        "flag": "🌏",
-        "sftp": {
-            "host": os.getenv("AS_SFTP_HOST", "").strip(),
-            "user": os.getenv("AS_SFTP_USER", "").strip(),
-            "password": os.getenv("AS_SFTP_PASSWORD", "").strip()
-        }
-    }
-}
-
-# 模糊方法配置
-BLUR_METHODS = {
-    "gaussian": {
-        "name": "高斯模糊",
-        "description": "使用高斯核进行平滑模糊"
-    },
-    "pixelate": {
-        "name": "像素化",
-        "description": "降低分辨率形成像素化效果"
-    },
-    "solid": {
-        "name": "纯色填充",
-        "description": "使用纯色块覆盖敏感区域"
-    }
-}
-
-# 环境变量设置
-def setup_environment():
-    """设置环境变量"""
-    os.environ.setdefault("CUDA_VISIBLE_DEVICES", "-1")
-    os.environ.setdefault("TF_CPP_MIN_LOG_LEVEL", "2")
-    os.environ.setdefault("TF_ENABLE_ONEDNN_OPTS", "0")
-    os.environ.setdefault("PYTHONPATH", str(BASE_DIR))
-
-# 创建必要目录
-def create_directories():
-    """创建必要的目录"""
-    directories = [UPLOAD_DIR, OUTPUT_DIR, TEMP_DIR, LOGS_DIR]
-    for directory in directories:
-        directory.mkdir(parents=True, exist_ok=True)
-
-# 验证配置
-def validate_config():
-    """验证配置是否正确"""
-    errors = []
-    
-    # 检查模型文件
-    for model_type, config in MODEL_CONFIG.items():
-        if "weights_path" in config:
-            if not config["weights_path"].exists():
-                errors.append(f"缺少{model_type}模型文件: {config['weights_path']}")
-    
-    # 检查目录权限
-    for directory in [UPLOAD_DIR, OUTPUT_DIR, TEMP_DIR, LOGS_DIR]:
-        if not os.access(directory, os.W_OK):
-            errors.append(f"目录无写入权限: {directory}")
-    
-    return errors
-
-if __name__ == "__main__":
-    # 配置验证脚本
-    setup_environment()
-    create_directories()
-    
-    errors = validate_config()
-    if errors:
-        print("❌ 配置验证失败:")
-        for error in errors:
-            print(f"  - {error}")
-    else:
-        print("✅ 配置验证通过")
+SERVER_REGIONS = _load_server_regions(_SERVER_REGIONS_CONFIG)

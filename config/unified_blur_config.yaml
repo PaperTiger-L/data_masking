@@ -11,5 +11,5 @@ detection_conf_thresh: 0.1
 blur_radius: 11
 
 # 是否使用GPU (如果可用)
-gpu_avail: True
+gpu_avail: False
 
