@@ -101,6 +101,12 @@ docker run --rm -p 8000:8000 \
 
 容器默认监听 `8000` 端口，访问地址：`http://127.0.0.1:8000`
 
+Docker 部署默认按 **CPU 服务器** 设计：
+
+- `config/unified_blur_config.yaml` 默认 `gpu_avail: False`
+- 容器内会使用 CPU 推理
+- 无需 NVIDIA Docker 或 GPU 驱动
+
 如果云平台要求注入端口环境变量，可改用：
 
 ```bash

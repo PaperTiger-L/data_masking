@@ -29,6 +29,7 @@ Pillow>=10.0.0
 # Object Detection Models
 # ============================================================================
 ultralytics>=8.0.0  # YOLOv8 runtime for face and license plate detection
+dill>=0.3.8
 
 # ============================================================================
 # Logging

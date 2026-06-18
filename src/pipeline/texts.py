@@ -35,9 +35,10 @@ class TextBlurrer:
 
         # 解析 DBNet 路径
         if dbnet_root is None:
-            # 默认相对 test2 工程：../DBNet
             here = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
-            dbnet_root = os.path.normpath(os.path.join(here, "src", "DBNet"))
+            direct_dbnet = os.path.normpath(os.path.join(here, "DBNet"))
+            nested_dbnet = os.path.normpath(os.path.join(here, "src", "DBNet"))
+            dbnet_root = direct_dbnet if os.path.isdir(direct_dbnet) else nested_dbnet
         self.dbnet_root = dbnet_root
         self.weights_path = (
             weights_path
