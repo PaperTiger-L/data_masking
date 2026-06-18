@@ -725,7 +725,6 @@ async def remote_page(request: Request, region: str = "europe"):
 
     session = _get_session_from_cookie(request)
     context = {
-        "request": request,
         "lang": lang,
         "t": t,
         "authed": bool(session and session.get("role") == "admin"),
@@ -748,7 +747,7 @@ async def remote_page(request: Request, region: str = "europe"):
         except Exception as exc:
             logger.error(f"无法列出远程 zip 文件: {exc}")
             context["remote_error"] = translate("error_remote_list_failed", lang)
-    response = templates.TemplateResponse("remote.html", request=request, context=context)
+    response = templates.TemplateResponse(request, "remote.html", context)
     response.set_cookie("lang", lang, max_age=3600*24*365)
     return response
 
@@ -767,7 +766,6 @@ async def remote_login(request: Request, password: str = Form(...)):
     def t(key: str):
         return translate(key, lang)
     context = {
-        "request": request,
         "lang": lang,
         "t": t,
         "authed": False,
@@ -783,7 +781,7 @@ async def remote_login(request: Request, password: str = Form(...)):
             {"key": "asia", "label": translate("server_asia", lang)},
         ],
     }
-    return templates.TemplateResponse("remote.html", request=request, context=context)
+    return templates.TemplateResponse(request, "remote.html", context)
 
 
 @app.post("/remote/settings/anonymization")
@@ -799,8 +797,8 @@ async def index(request: Request):
     lang = get_lang_from_request(request)
     def t(key: str):
         return translate(key, lang)
-    context = {"request": request, "lang": lang, "t": t, "sftp_remote_dir": SFTP_REMOTE_DIR}
-    response = templates.TemplateResponse("index.html", request=request, context=context)
+    context = {"lang": lang, "t": t, "sftp_remote_dir": SFTP_REMOTE_DIR}
+    response = templates.TemplateResponse(request, "index.html", context)
     response.set_cookie("lang", lang, max_age=3600*24*365)
     return response
 
@@ -810,8 +808,8 @@ async def privacy_page(request: Request):
     lang = get_lang_from_request(request)
     def t(key: str):
         return translate(key, lang)
-    context = {"request": request, "lang": lang, "t": t}
-    response = templates.TemplateResponse("privacy.html", request=request, context=context)
+    context = {"lang": lang, "t": t}
+    response = templates.TemplateResponse(request, "privacy.html", context)
     response.set_cookie("lang", lang, max_age=3600*24*365)
     return response
 
