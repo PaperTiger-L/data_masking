@@ -3,7 +3,7 @@ FROM python:3.11-slim
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1 \
-    PORT=9000
+    PORT=8000
 
 WORKDIR /app
 
@@ -34,6 +34,6 @@ COPY data /app/data
 
 RUN mkdir -p /app/uploads /app/output /app/temp /app/logs /app/staging /app/src/DBNet/weights /mnt/data
 
-EXPOSE 9000
+EXPOSE 8000
 
-CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "9000"]
+CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000"]

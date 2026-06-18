@@ -962,7 +962,7 @@ if __name__ == "__main__":
 
     logger.info(f"日志系统已初始化，日志文件: {LOG_CONFIG['file']}")
 
-    server_port = int(os.getenv("PORT", os.getenv("SERVER_PORT", "9000")))
+    server_port = int(os.getenv("PORT", os.getenv("SERVER_PORT", "8000")))
     uvicorn.run(
         "app:app",
         host="0.0.0.0",

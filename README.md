@@ -82,7 +82,7 @@ pip install -r requirements.txt
 python app.py
 ```
 
-默认访问地址：`http://127.0.0.1:9000`
+默认访问地址：`http://127.0.0.1:8000`
 
 #### 5. Docker 部署
 
@@ -91,7 +91,7 @@ python app.py
 docker build -t data-masking:latest .
 
 # 启动容器
-docker run --rm -p 9000:9000 \
+docker run --rm -p 8000:8000 \
   -v $(pwd)/logs:/app/logs \
   -v $(pwd)/staging:/app/staging \
   -v $(pwd)/output:/app/output \
@@ -99,13 +99,13 @@ docker run --rm -p 9000:9000 \
   data-masking:latest
 ```
 
-容器默认监听 `9000` 端口，访问地址：`http://127.0.0.1:9000`
+容器默认监听 `8000` 端口，访问地址：`http://127.0.0.1:8000`
 
 如果云平台要求注入端口环境变量，可改用：
 
 ```bash
-docker run --rm -p 9000:9000 \
-  -e PORT=9000 \
+docker run --rm -p 8000:8000 \
+  -e PORT=8000 \
   -v $(pwd)/logs:/app/logs \
   -v $(pwd)/staging:/app/staging \
   -v $(pwd)/output:/app/output \
@@ -117,7 +117,7 @@ docker run --rm -p 9000:9000 \
 
 ### Web界面使用
 
-1. **访问系统**: 打开浏览器访问 http://localhost:9000
+1. **访问系统**: 打开浏览器访问 http://localhost:8000
 
 2. **阅读隐私协议**: 首次访问需要阅读并同意隐私声明
 
@@ -173,8 +173,8 @@ docker run --rm -p 9000:9000 \
 Docker 部署时可继续使用现有环境变量覆盖配置，例如：
 
 ```bash
-PORT=9000
-SERVER_PORT=9000
+PORT=8000
+SERVER_PORT=8000
 STAGING_ROOT=/app/staging
 SQLITE_DB_PATH=/app/data_masking.db
 EU_SFTP_HOST=europe.example.com
