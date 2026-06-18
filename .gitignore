@@ -11,3 +11,5 @@ output/
 
 .env
 .env.*
+.claude/
+
